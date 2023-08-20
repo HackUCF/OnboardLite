@@ -1,25 +1,23 @@
-import boto3, json
-from boto3.dynamodb.conditions import Key, Attr
-
-from jose import JWTError, jwt
-
-from fastapi import APIRouter, Cookie, Request, Response
-from fastapi.templating import Jinja2Templates
-from fastapi.responses import HTMLResponse
-from fastapi.encoders import jsonable_encoder
-
-from pydantic import validator, error_wrappers
-
+import json
 from typing import Optional
-from models.user import UserModelMutable
-from models.info import InfoModel
 
+import boto3
+from boto3.dynamodb.conditions import Attr, Key
+from fastapi import APIRouter, Cookie, Request, Response
+from fastapi.encoders import jsonable_encoder
+from fastapi.responses import HTMLResponse
+from fastapi.templating import Jinja2Templates
+from jose import JWTError, jwt
+from pydantic import error_wrappers, validator
+
+from models.info import InfoModel
+from models.user import UserModelMutable
 from util.authentication import Authentication
 from util.errors import Errors
-from util.options import Options
 from util.kennelish import Kennelish, Transformer
+from util.options import Options
 
-options = Options.fetch()
+options = Options()
 
 templates = Jinja2Templates(directory="templates")
 

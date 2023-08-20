@@ -4,12 +4,16 @@ templates = Jinja2Templates(directory="templates")
 
 class Errors:
     def __init__(self):
-        super(Errors, self).__init__
+        pass
 
-    def generate(request, num=404, msg="Page not found.", essay=""):
-        return templates.TemplateResponse("error.html", {"request": request, "code": num, "reason": msg, "essay": essay}, status_code=num)
+    def generate(self, request, num=404, msg="Page not found.", essay=""):
+        return templates.TemplateResponse(
+            "error.html",
+            {"request": request, "code": num, "reason": msg, "essay": essay},
+            status_code=num,
+        )
 
-    def basic_http():
+    def basic_http(self):
         return {
             404: {"description": "Page not found"},
             401: {"description": "User not authorized. Try logging in?"},
