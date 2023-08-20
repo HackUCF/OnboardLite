@@ -9,13 +9,14 @@ from fastapi import Request
 # Import options and errors
 from util.errors import Errors
 from util.options import Options
-options = Options.fetch()
+
+options = Options()
 
 class Authentication:
     def __init__(self):
-        super(Authentication, self).__init__
+        pass
 
-    def admin(func):
+    def admin(self, func):
         @wraps(func)
         async def wrapper(request: Request, token: Optional[str], *args, **kwargs):
 
@@ -44,8 +45,7 @@ class Authentication:
 
         return wrapper
 
-
-    def member(func):
+    def member(self, func):
         @wraps(func)
         async def wrapper_member(request: Request, token: Optional[str], payload: Optional[object], *args, **kwargs):
 

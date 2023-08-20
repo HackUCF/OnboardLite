@@ -4,7 +4,8 @@ import yaml
 
 class Options:
     def __init__(self):
-        super(Options, self).__init__
+        self.options = self.fetch()
+        pass
 
     def fetch(path="config/options.yml"):
         # Get file path
@@ -16,12 +17,10 @@ class Options:
 
         return options
 
-    def get(arg=None):
-        options = this.fetch()
+    def get(self, arg=None):
+        return self.options.get(arg, None)
 
-        return options.get(arg, None)
-
-
+    @staticmethod
     def get_form_body(file="1"):
         try:
             form_file = os.path.join(os.getcwd(), "forms", f"{file}.json")

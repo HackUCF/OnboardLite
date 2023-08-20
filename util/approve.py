@@ -8,7 +8,7 @@ from boto3.dynamodb.conditions import Key, Attr
 from util.options import Options
 from util.horsepass import HorsePass
 
-options = Options.fetch()
+options = Options()
 
 """
 This function will ensure a member meets all requirements to be a member, and if so, creates an
