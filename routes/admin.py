@@ -132,30 +132,32 @@ async def admin_csv(request: Request, token: Optional[str] = Cookie(None)):
     table = dynamodb.Table(options.get("aws").get("dynamodb").get("table"))
     data = table.scan().get("Items", None)
 
-    # TODO: Instead of manually creating the CSV, 
+    # TODO: Instead of manually creating the CSV,
     #       use the CSV module to do it for us along with the User model.
     output = ""
     for user in data:
-        fields = OrderedDict({
-            "Membership ID": user.get("id"),
-            "First Name" : user.get("first_name"),
-            "Last Name" : user.get("surname"),
-            "NID" : user.get("nid"),
-            "Is Returning" : user.get("is_returning"),
-            "Gender": user.get("gender"),
-            "Major": user.get("major"),
-            "Class Standing" : user.get("class_standing"),
-            "Shirt Size" : user.get("shirt_size"),
-            "Discord Username" : user.get("discord", {}).get("username"),
-            "Experience" : user.get("experience"),
-            "Cyber Interests" : user.get("curiosity"),
-            "Event Interest" : user.get("attending"),
-            "Is C3 Interest" : user.get("c3_interest"),
-            "Comments" : user.get("comments"),
-            "Ethics Form Timestamp" : user.get("ethics_form", {}).get("signtime"),
-            "Minecraft" : user.get("minecraft"),
-            "Infra Email" : user.get("infra_email")
-        })
+        fields = OrderedDict(
+            {
+                "Membership ID": user.get("id"),
+                "First Name": user.get("first_name"),
+                "Last Name": user.get("surname"),
+                "NID": user.get("nid"),
+                "Is Returning": user.get("is_returning"),
+                "Gender": user.get("gender"),
+                "Major": user.get("major"),
+                "Class Standing": user.get("class_standing"),
+                "Shirt Size": user.get("shirt_size"),
+                "Discord Username": user.get("discord", {}).get("username"),
+                "Experience": user.get("experience"),
+                "Cyber Interests": user.get("curiosity"),
+                "Event Interest": user.get("attending"),
+                "Is C3 Interest": user.get("c3_interest"),
+                "Comments": user.get("comments"),
+                "Ethics Form Timestamp": user.get("ethics_form", {}).get("signtime"),
+                "Minecraft": user.get("minecraft"),
+                "Infra Email": user.get("infra_email"),
+            }
+        )
 
         if output == "":
             output += ", ".join(fields.keys()) + "\n"

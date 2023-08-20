@@ -7,6 +7,7 @@ from urllib.parse import urlparse
 
 import boto3
 from boto3.dynamodb.conditions import Attr
+
 # FastAPI
 from fastapi import Cookie, FastAPI, Request, Response, status
 from fastapi.responses import RedirectResponse
@@ -16,15 +17,20 @@ from jose import jwt
 from requests_oauthlib import OAuth2Session
 
 from models.user import UserModel
+
 # Import routes
 from routes import admin, api, stripe
 from util.approve import Approve
+
 # Import middleware
 from util.authentication import Authentication
+
 # Import error handling
 from util.errors import Errors
+
 # Import the page rendering library
 from util.kennelish import Kennelish
+
 # Import options
 from util.options import Options
 

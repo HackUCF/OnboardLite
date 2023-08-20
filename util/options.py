@@ -1,13 +1,14 @@
 import json
 import os
+
 import yaml
 
 
 class Options:
     def __init__(self):
-        super(Options, self).__init__
+        pass
 
-    def fetch(path="config/options.yml"):
+    def fetch(self, path="config/options.yml"):
         # Get file path
         full_path = os.path.join(os.getcwd(), path)
 
@@ -17,12 +18,12 @@ class Options:
 
         return options
 
-    def get(arg=None):
-        options = this.fetch()
+    def get(self, arg=None):
+        options = self.fetch()
 
         return options.get(arg, None)
 
-    def get_form_body(file="1"):
+    def get_form_body(self, file="1"):
         try:
             form_file = os.path.join(os.getcwd(), "forms", f"{file}.json")
             return json.load(open(form_file, "r"))

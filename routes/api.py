@@ -47,8 +47,6 @@ async def get_form(num: str):
     return Options.get_form_body(num)
 
 
-
-
 @router.get("/form/{num}/html", response_class=HTMLResponse)
 @Authentication.member
 async def get_form_html(
@@ -77,8 +75,6 @@ async def get_form_html(
     return body
 
 
-
-
 @router.post("/form/{num}")
 @Authentication.member
 async def post_form(
@@ -95,7 +91,7 @@ async def post_form(
 
     try:
         inp = await request.json()
-    except:
+    except:  # noqa - I have no clue what the exception that would be raised here is.
         return {"description": "Malformed JSON input."}
 
     try:

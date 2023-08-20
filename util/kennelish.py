@@ -1,4 +1,4 @@
-from typing import Literal
+from typing import Dict, Literal
 
 from pydantic import constr, create_model
 
@@ -63,9 +63,9 @@ class Kennelish:
         output += Kennelish.parse(entry.get("elements", []), user_data)
         return output
 
-    def signature(self, entry, user_data=None):
-        target = user_data.get('first_name', 'HackUCF Member #' + user_data.get('id'))
-        target_surname = user_data.get('surname', '')
+    def signature(self, entry, user_data: Dict = {}):
+        target = user_data.get("first_name", "HackUCF Member #" + user_data.get("id"))
+        target_surname = user_data.get("surname", "")
         output = f"<div name='{entry.get('key')}' class='signature'>\
             By submitting this form, you, {target} {target_surname}, agree to the above terms. \
             This form will be time-stamped.</div>"
@@ -98,7 +98,11 @@ class Kennelish:
         elif inp_type == "email":
             regex_pattern = ' pattern="([A-Za-z0-9]+[.-_])*[A-Za-z0-9]+@[A-Za-z0-9-]+(\\.[A-Z|a-z]{2,})+"'
 
-        output = f"<input class='kennelish_input'{' required' if entry.get('required') else ' '}{regex_pattern} name='{entry.get('key', '')}' type='{inp_type}' value='{prefill}' placeholder='{entry.get('label', '')}' />"
+        is_required = "required" if entry.get("required") else " "
+        name = entry.get("key", "")
+        placeholder = entry.get("label", "")
+        output = f"<input class='kennelish_input'{is_required}{regex_pattern} name='{name}' \
+            type='{inp_type}' value='{prefill}' placeholder='{placeholder}' />"
         return Kennelish.label(entry, output)
 
     def radio(self, entry, user_data=None):
@@ -112,23 +116,39 @@ class Kennelish:
         else:
             prefill = ""
 
-        output = f"<fieldset name='{entry.get('key', '')}'{' required' if entry.get('required') else ' '} class='kennelish_input radio'>"
+        name = entry.get("key", "")
+        is_required = "required" if entry.get("required") else " "
+        output = f"<fieldset name='{name}' {is_required} class='kennelish_input radio'>"
         for option in entry["options"]:
             selected = "" if option != prefill else "checked"
-            output += f"<div><input type='radio' {selected} name='{entry.get('key', '')}' id='radio_{entry.get('key', '').replace('.', '_').replace(' ', '_')}_{option}' value='{option}'><label for='radio_{entry.get('key', '').replace('.', '_').replace(' ', '_')}_{option}'>{option}</label></div>"
+            name = entry.get("key", "")
+            tag_id = f'radio_{name.replace(".", "_").replace(" ", "_")}_{option}'
+            label_for = f'radio_{name.replace(".", "_").replace(" ", "_")}_{option}'
+            output += f"<div><input type='radio' {selected} name='{name}' id='{tag_id}' value='{option}'>\
+                <label for='{label_for}'>{option}</label></div>"
         output += "</fieldset>"
         return Kennelish.label(entry, output)
 
     def checkbox(self, entry, user_data=None):
         # Checkboxes do not support pre-filling!
 
-        output = f"<fieldset name='{entry.get('key', '')}'{' required' if entry.get('required') else ' '} class='kennelish_input checkbox'>"
+        is_required = "required" if entry.get("required") else " "
+        output = f"<fieldset name='{entry.get('key', '')}'{is_required} class='kennelish_input checkbox'>"
         for option in entry.get("options"):
-            output += f"<div><input type='checkbox' name='{entry.get('key', '')}' id='checkbox_{entry.get('key', '').replace('.', '_').replace(' ', '_')}_{option}' value='{option}'><label for='checkbox_{entry.get('key', '').replace('.', '_').replace(' ', '_')}_{option}'>{option}</label></div>"
+            name = entry.get("key", "")
+            tag_id = f'checkbox_{name.replace(".", "_").replace(" ", "_")}_{option}'
+            output += f"<div><input type='checkbox' name='{name}' id='{tag_id}' \
+                value='{option}'><label for='{tag_id}'>{option}</label></div>"
 
         # Other
-        output += f"<div><input type='checkbox' name='{entry.get('key', '')}' id='checkbox_{entry.get('key', '').replace('.', '_').replace(' ', '_')}_OTHER' value='_other'><label for='checkbox_{entry.get('key', '').replace('.', '_').replace(' ', '_')}_OTHER'>Other</label></div>"
-        output += f"<input id='{entry.get('key', '').replace('.', '_').replace(' ', '_')}' class='other_checkbox' type='text' placeholder='{entry.get('label', 'Other')}...'>"
+        name = entry.get("key", "")
+        tag_id = f'checkbox_{name.replace(".", "_").replace(" ", "_")}_OTHER'
+        output += f"<div><input type='checkbox' name='{name}' id='{tag_id}' value='_other'>\
+            <label for='{tag_id}'>Other</label></div>"
+
+        clean_name = name.replace(".", "_").replace(" ", "_")
+        placeholder = entry.get("label", "Other")
+        output += f"<input id='{clean_name}' class='other_checkbox' type='text' placeholder='{placeholder}...'>"
         output += "</fieldset>"
         return Kennelish.label(entry, output)
 
@@ -141,12 +161,19 @@ class Kennelish:
         else:
             prefill = "_default"
 
-        output = f"<select class='kennelish_input'{' required' if entry.get('required') else ' '} name='{entry.get('key', '')}'><option disabled {'selected ' if prefill == '_default' else ''}value='_default'>Select...</option>"
+        is_required = "required" if entry.get("required") else " "
+        name = entry.get("key", "")
+        is_selected = "selected " if prefill == "_default" else ""
+        output = f"<select class='kennelish_input'{is_required} name='{name}'>\
+            <option disabled {is_selected} value='_default'>Select...</option>"
         for option in entry.get("options"):
             output += f"<option {'selected ' if prefill == option else ''}value='{option}'>{option}</option>"
 
         if entry.get("other"):
-            output += f"<option value='_other'>Other</option></select><input id='{entry.get('key', '').replace('.', '_').replace(' ', '_')}' class='other_dropdown' type='text' placeholder='{entry.get('label', 'Other')}...'>"
+            input_id = entry.get("key", "").replace(".", "_").replace(" ", "_")
+            placeholder = entry.get("label", "Other")
+            output += f"<option value='_other'>Other</option></select>\
+                <input id='{input_id}' class='other_dropdown' type='text' placeholder='{placeholder}...'>"
         else:
             output += "</select>"
         return Kennelish.label(entry, output)
@@ -164,20 +191,30 @@ class Kennelish:
         expert_label = entry.get("expert_label", "Expert")
 
         output = f"<span class='caption'>{novice_label}</span><span class='right caption'>{expert_label}</span><br>"
-        output += f"<fieldset name='{entry.get('key', '')}'{' required' if entry.get('required') else ' '} class='kennelish_input radio gridded'>"
+        name = entry.get("key", "")
+        is_required = "required" if entry.get("required") else " "
+        output += f"<fieldset name='{name}' {is_required} class='kennelish_input radio gridded'>"
+        # TODO: why 6?
         for option in range(1, 6):
             selected = "" if option != prefill else "checked"
-            output += f"<div><input type='radio' {selected} name='{entry.get('key', '')}' id='radio_{entry.get('key', '').replace('.', '_').replace(' ', '_')}_{option}' value='{option}'><label for='radio_{entry.get('key', '').replace('.', '_').replace(' ', '_')}_{option}'>{option}</label></div>"
+            name = entry.get("key", "")
+            input_id = f'radio_{name.replace(".", "_").replace(" ", "_")}_{option}'
+            output += f"<div><input type='radio' {selected} name='{name}' id='{input_id}' value='{option}'>\
+                <label for='{input_id}'>{option}</label></div>"
         output += "</fieldset>"
         return Kennelish.label(entry, output)
 
     def navigation(self, entry):
         if entry.get("prev"):
-            # back = f"<a class='btn wide grey' href='{entry.get('prev', '#')}'>{entry.get('prev_label', 'Back')}</a>"
-            back = f"<button type='button' class='btn wide grey' onclick='submit_and_nav(\"{entry.get('prev', '#')}\")'>{entry.get('prev_label', 'Back')}</button>"
+            prev = entry.get("prev")
+            prev_label = entry.get("prev_label", "Back")
+            back = f"<button type='button' class='btn wide grey' \
+                onclick='submit_and_nav(\"{prev}\")'>{prev_label}</button>"
         else:
             back = ""
-        forward = f"<button type='button' class='btn wide' onclick='submit_and_nav(\"{entry.get('next', '#')}\")'>{entry.get('next_label', 'Next')}</button>"
+        next = entry.get("next", "#")
+        next_label = entry.get("next_label", "Next")
+        forward = f"<button type='button' class='btn wide' onclick='submit_and_nav(\"{next}\")'>{next_label}</button>"
         return f"<div class='entry'><div>{back}</div><div>{forward}</div></div>"
 
     def invalid(self, entry):

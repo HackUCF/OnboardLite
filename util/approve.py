@@ -9,7 +9,7 @@ from util.options import Options
 options = Options.fetch()
 
 """
-This function will ensure a member meets all requirements to be a member, 
+This function will ensure a member meets all requirements to be a member,
 and if so, creates an Infra account + whitelist them to the Hack@UCF Minecraft server.
 
 If approval fails, dispatch a Discord message saying that something went wrong and how to fix it.
