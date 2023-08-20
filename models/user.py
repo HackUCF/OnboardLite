@@ -1,5 +1,7 @@
-from pydantic import BaseModel
 from typing import Optional
+
+from pydantic import BaseModel
+
 
 class DiscordModel(BaseModel):
     email:              Optional[str] = None

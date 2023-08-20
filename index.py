@@ -1,44 +1,41 @@
-import json, re, uuid
+import json
 import os
-
-from datetime import datetime, timedelta
+import re
 import time
+import uuid
+from datetime import datetime, timedelta
 from typing import Optional, Union
-
-# FastAPI
-from fastapi import Depends, FastAPI, HTTPException, status, Request, Response, Cookie
-from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
-from fastapi.templating import Jinja2Templates
-from fastapi.staticfiles import StaticFiles
-from fastapi.responses import RedirectResponse
-from pydantic import BaseModel
-
-from jose import JWTError, jwt
 from urllib.parse import urlparse
-from requests_oauthlib import OAuth2Session
 
 import boto3
-from boto3.dynamodb.conditions import Key, Attr
+from boto3.dynamodb.conditions import Attr, Key
+# FastAPI
+from fastapi import (Cookie, Depends, FastAPI, HTTPException, Request,
+                     Response, status)
+from fastapi.responses import RedirectResponse
+from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
+from fastapi.staticfiles import StaticFiles
+from fastapi.templating import Jinja2Templates
+from jose import JWTError, jwt
+from pydantic import BaseModel
+from requests_oauthlib import OAuth2Session
 
-# Import the page rendering library
-from util.kennelish import Kennelish
-
+from util.approve import Approve
 # Import middleware
 from util.authentication import Authentication
-
 # Import error handling
 from util.errors import Errors
-from util.approve import Approve
-
+# Import the page rendering library
+from util.kennelish import Kennelish
 # Import options
 from util.options import Options
+
 options = Options.fetch()
 
 # Import data types
 from models.user import UserModel
-
 # Import routes
-from routes import api, stripe, admin
+from routes import admin, api, stripe
 
 ### TODO: TEMP
 os.environ['OAUTHLIB_INSECURE_TRANSPORT'] = '0'

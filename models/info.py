@@ -1,8 +1,10 @@
+from typing import List, Optional
+
 from pydantic import BaseModel
-from typing import Optional, List
 
 # Import data types
 from models.user import PublicContact
+
 
 class InfoModel(BaseModel):
     name: Optional[str] = "Onboard"

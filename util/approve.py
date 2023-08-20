@@ -1,12 +1,13 @@
 import json
 import os
-import yaml
+
 import boto3
 import requests
-from boto3.dynamodb.conditions import Key, Attr
+import yaml
+from boto3.dynamodb.conditions import Attr, Key
 
-from util.options import Options
 from util.horsepass import HorsePass
+from util.options import Options
 
 options = Options()
 

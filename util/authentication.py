@@ -1,10 +1,9 @@
 import time
-
 from functools import wraps
-from jose import JWTError, jwt
 from typing import Optional
 
 from fastapi import Request
+from jose import JWTError, jwt
 
 # Import options and errors
 from util.errors import Errors

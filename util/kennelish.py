@@ -1,5 +1,7 @@
 from typing import Literal, Set
-from pydantic import BaseModel, create_model, constr
+
+from pydantic import BaseModel, constr, create_model
+
 
 # Known bug: You cannot pre-fill data stored in second-level DynamoDB levels.
 # So "parent.child" won't retrieve a value.
