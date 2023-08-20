@@ -104,7 +104,7 @@ const sanitizeHTML = (data) => {
 
 function showTable() {
     qrScanner.stop();
-    
+
     document.getElementById("user").style.display = "none";
     document.getElementById("scanner").style.display = "none";
     document.getElementById("users").style.display = "block";
@@ -112,7 +112,7 @@ function showTable() {
 
 function showQR() {
     qrScanner.start();
-    
+
     document.getElementById("user").style.display = "none";
     document.getElementById("users").style.display = "none";
     document.getElementById("scanner").style.display = "block";
@@ -128,7 +128,7 @@ function showUser(userId) {
 
     // Statuses
     document.getElementById("statusColor").style.color = user.is_full_member ? "#51cd7f" : "#cf565f";
-    
+
     document.getElementById("status").innerText = user.status;
     document.getElementById("did_pay_dues").innerText = user.did_pay_dues ? "✔️" : "❌";
     document.getElementById("ethics_form").innerText = (user.ethics_form.signtime && (Number.parseInt(user.ethics_form.signtime) !== -1)) ? (new Date(Number.parseInt(user.ethics_form.signtime))).toLocaleString() : "❌";
@@ -248,7 +248,7 @@ window.onload = evt => {
         {
             maxScansPerSecond: 10,
             highlightScanRegion: true,
-            returnDetailedScanResult: true 
+            returnDetailedScanResult: true
         },
     );
 
