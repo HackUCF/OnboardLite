@@ -4,12 +4,9 @@ import os
 import uuid
 
 import boto3
-from botocore.exceptions import ClientError
 
 from fastapi import APIRouter, Cookie, Request, Response
-from fastapi.responses import HTMLResponse
 
-from pydantic import validator, error_wrappers
 
 from typing import Optional
 from models.user import PublicContact

@@ -1,12 +1,7 @@
-import json
 import os
-import datetime
 
 import boto3
-import requests
 from python_terraform import *
-from boto3.dynamodb.conditions import Key, Attr
-import yaml
 import openstack
 
 from util.horsepass import HorsePass
@@ -35,12 +30,12 @@ class Approve:
 
         try:
             os.remove("terraform.tfstate")
-        except Exception as e:
+        except Exception:
             pass
 
         try:
             os.remove("terraform.tfstate.backup")
-        except Exception as e:
+        except Exception:
             pass
 
         try:
@@ -89,7 +84,7 @@ class Approve:
                     name=member_id,
                     description="Automatically provisioning with Hack@UCF Onboard",
                 )
-            except openstack.exceptions.ConflictException as e:
+            except openstack.exceptions.ConflictException:
                 # This happens sometimes.
                 new_proj = conn.identity.find_project("member_id")
 

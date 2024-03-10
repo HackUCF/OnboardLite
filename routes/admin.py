@@ -1,18 +1,15 @@
-import boto3, json, requests
-from boto3.dynamodb.conditions import Key, Attr
+import boto3
+from boto3.dynamodb.conditions import Attr
 
-from jose import JWTError, jwt
+from jose import jwt
 
 from fastapi import APIRouter, Cookie, Request, Response, Body
 from fastapi.templating import Jinja2Templates
-from fastapi.responses import HTMLResponse
 from fastapi.encoders import jsonable_encoder
 
-from pydantic import validator, error_wrappers
 
-from typing import Optional, Any
+from typing import Optional
 from models.user import UserModelMutable
-from models.info import InfoModel
 
 from util.authentication import Authentication
 from util.errors import Errors
@@ -21,7 +18,6 @@ from util.approve import Approve
 from util.discord import Discord
 from util.email import Email
 
-from util.kennelish import Kennelish, Transformer
 
 options = Options.fetch()
 

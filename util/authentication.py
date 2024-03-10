@@ -1,7 +1,7 @@
 import time
 
 from functools import wraps
-from jose import JWTError, jwt
+from jose import jwt
 from typing import Optional
 
 from fastapi import Request, status

@@ -4,7 +4,7 @@ from botocore.exceptions import ClientError
 from fastapi import APIRouter, Cookie, Request
 from fastapi.responses import HTMLResponse
 
-from pydantic import validator, error_wrappers
+from pydantic import error_wrappers
 
 from typing import Optional
 from models.user import PublicContact
@@ -104,7 +104,7 @@ async def post_form(
 
     try:
         validated = model(**inp)
-    except error_wrappers.ValidationError as e:
+    except error_wrappers.ValidationError:
         return {"description": "Malformed input."}
 
     # Remove items we did not update

@@ -1,18 +1,13 @@
-import boto3, json, requests
-from boto3.dynamodb.conditions import Key, Attr
+import boto3
+import json
 
-from jose import JWTError, jwt
 
-from fastapi import APIRouter, Cookie, Request, Response, HTTPException, status
+from fastapi import APIRouter, Cookie, Request
 from fastapi.templating import Jinja2Templates
-from fastapi.responses import HTMLResponse
-from fastapi.encoders import jsonable_encoder
 from fastapi.responses import FileResponse
 
-from pydantic import validator, error_wrappers
 
 from typing import Optional
-from models.user import UserModelMutable
 from models.info import InfoModel
 from models.user import PublicContact
 
@@ -23,8 +18,6 @@ from util.approve import Approve
 from util.discord import Discord
 from util.email import Email
 from util.limiter import RateLimiter
-import util.limiter as limiter
-from util.kennelish import Kennelish, Transformer
 
 from python_terraform import *
 import openstack
@@ -86,12 +79,12 @@ async def create_resource(project, callback_discord_id=None):
     # clean up
     try:
         os.remove("terraform.tfstate")
-    except Exception as e:
+    except Exception:
         pass
 
     try:
         os.remove("terraform.tfstate.backup")
-    except Exception as e:
+    except Exception:
         pass
 
     if callback_discord_id:

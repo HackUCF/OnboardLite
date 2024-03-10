@@ -1,5 +1,5 @@
-from typing import Literal, Set
-from pydantic import BaseModel, create_model, constr
+from typing import Literal
+from pydantic import create_model, constr
 
 
 # Known bug: You cannot pre-fill data stored in second-level DynamoDB levels.

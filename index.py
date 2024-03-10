@@ -1,25 +1,23 @@
-import json, re, uuid
+import json
+import uuid
 import os
 import requests
 
-from datetime import datetime, timedelta
 import time
-from typing import Optional, Union
+from typing import Optional
 
 # FastAPI
-from fastapi import Depends, FastAPI, HTTPException, status, Request, Response, Cookie
-from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
+from fastapi import FastAPI, status, Request, Response, Cookie
 from fastapi.templating import Jinja2Templates
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import RedirectResponse, FileResponse
-from pydantic import BaseModel
 
-from jose import JWTError, jwt
+from jose import jwt
 from urllib.parse import urlparse
 from requests_oauthlib import OAuth2Session
 
 import boto3
-from boto3.dynamodb.conditions import Key, Attr
+from boto3.dynamodb.conditions import Attr
 
 # Import the page rendering library
 from util.kennelish import Kennelish
