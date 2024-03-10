@@ -13,6 +13,8 @@ from util.errors import Errors
 from util.kennelish import Kennelish, Transformer
 from util.options import Options
 
+import json
+
 options = Options.fetch()
 
 router = APIRouter(prefix="/api", tags=["API"], responses=Errors.basic_http())
@@ -97,7 +99,7 @@ async def post_form(
 
     try:
         inp = await request.json()
-    except:
+    except json.JSONDecodeError:
         return {"description": "Malformed JSON input."}
 
     try:
