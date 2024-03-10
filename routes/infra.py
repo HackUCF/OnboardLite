@@ -1,5 +1,6 @@
 import boto3
 import json
+import os
 
 
 from fastapi import APIRouter, Cookie, Request
@@ -19,7 +20,7 @@ from util.discord import Discord
 from util.email import Email
 from util.limiter import RateLimiter
 
-from python_terraform import *
+from python_terraform import Terraform
 import openstack
 import asyncio
 

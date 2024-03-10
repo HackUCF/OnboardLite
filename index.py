@@ -32,7 +32,6 @@ from util.approve import Approve
 # Import options
 from util.options import Options
 
-options = Options.fetch()
 
 # Import data types
 from models.user import UserModel
@@ -44,6 +43,7 @@ from routes import api, stripe, admin, wallet, infra
 os.environ["OAUTHLIB_INSECURE_TRANSPORT"] = "0"
 ###
 
+options = Options.fetch()
 
 # Initiate FastAPI.
 app = FastAPI()
@@ -245,7 +245,7 @@ async def oauth_transformer_new(
             "X-Audit-Log-Reason": "Hack@UCF OnboardLite Bot",
         }
         put_join_guild = {"access_token": token["access_token"]}
-        req = requests.put(
+        requests.put(
             f"https://discordapp.com/api/guilds/{options.get('discord', {}).get('guild_id')}/members/{discord_id}",
             headers=headers,
             data=json.dumps(put_join_guild),
@@ -314,7 +314,7 @@ Renders the landing page for the sign-up flow.
 
 @app.get("/join/")
 async def join(request: Request, token: Optional[str] = Cookie(None)):
-    if token == None:
+    if token is None:
         return templates.TemplateResponse("signup.html", {"request": request})
     else:
         return RedirectResponse("/join/2/", status_code=status.HTTP_302_FOUND)

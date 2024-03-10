@@ -62,7 +62,7 @@ async def get_infra(
         return {"username": "", "password": "", "error": "Missing ?member_id"}
 
     creds = Approve.provision_infra(member_id)
-    if creds == None:
+    if creds is None:
         creds = {}
 
     if not creds:
@@ -266,7 +266,7 @@ async def admin_list(request: Request, token: Optional[str] = Cookie(None)):
 
 @router.get("/csv")
 @Authentication.admin
-async def admin_list(request: Request, token: Optional[str] = Cookie(None)):
+async def admin_list_csv(request: Request, token: Optional[str] = Cookie(None)):
     """
     API endpoint that dumps all users as CSV.
     """

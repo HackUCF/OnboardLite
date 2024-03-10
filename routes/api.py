@@ -111,7 +111,7 @@ async def post_form(
     items_to_update = list(validated.dict().items())
     items_to_keep = []
     for item in items_to_update:
-        if item[1] != None:
+        if item[1] is not None:
             # English -> Boolean
             if item[1] == "Yes" or item[1] == "I promise not to do this.":
                 item = (item[0], True)

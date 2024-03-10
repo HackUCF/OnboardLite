@@ -1,7 +1,7 @@
 import os
 
 import boto3
-from python_terraform import *
+from python_terraform import Terraform
 import openstack
 
 from util.horsepass import HorsePass
@@ -151,7 +151,7 @@ class Approve:
             creds = Approve.provision_infra(
                 member_id, user_data=user_data
             )  # TODO(err): sometimes this is None
-            if creds == None:
+            if creds is None:
                 creds = {}
 
             # Minecraft server

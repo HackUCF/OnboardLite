@@ -80,7 +80,7 @@ class Kennelish:
             else:
                 prefill = user_data.get(key, "")
 
-            if prefill == None:
+            if prefill is None:
                 prefill = ""
         else:
             prefill = ""
@@ -205,7 +205,7 @@ class Transformer:
     def kennelish_to_form(json):
         obj = {}
 
-        if json == None:
+        if json is None:
             return {}
 
         for el in json:
@@ -245,7 +245,7 @@ class Transformer:
                 obj[el.get("key")] = (int, None)
 
             # For arbitrary strings.
-            elif el.get("key") != None:
+            elif el.get("key") is not None:
                 obj[el.get("key")] = (str, None)
 
         return obj
