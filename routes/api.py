@@ -1,3 +1,4 @@
+import json
 from typing import Optional
 
 import boto3
@@ -12,8 +13,6 @@ from util.authentication import Authentication
 from util.errors import Errors
 from util.kennelish import Kennelish, Transformer
 from util.options import Options
-
-import json
 
 options = Options.fetch()
 
