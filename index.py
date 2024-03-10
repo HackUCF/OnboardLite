@@ -1,43 +1,34 @@
 import json
-import uuid
 import os
-import requests
-
 import time
+import uuid
 from typing import Optional
-
-# FastAPI
-from fastapi import FastAPI, status, Request, Response, Cookie
-from fastapi.templating import Jinja2Templates
-from fastapi.staticfiles import StaticFiles
-from fastapi.responses import RedirectResponse, FileResponse
-
-from jose import jwt
 from urllib.parse import urlparse
-from requests_oauthlib import OAuth2Session
 
 import boto3
+import requests
 from boto3.dynamodb.conditions import Attr
-
-# Import the page rendering library
-from util.kennelish import Kennelish
-
-# Import middleware
-from util.authentication import Authentication
-
-# Import error handling
-from util.errors import Errors
-from util.approve import Approve
-
-# Import options
-from util.options import Options
-
+# FastAPI
+from fastapi import Cookie, FastAPI, Request, Response, status
+from fastapi.responses import FileResponse, RedirectResponse
+from fastapi.staticfiles import StaticFiles
+from fastapi.templating import Jinja2Templates
+from jose import jwt
+from requests_oauthlib import OAuth2Session
 
 # Import data types
 from models.user import UserModel
-
 # Import routes
-from routes import api, stripe, admin, wallet, infra
+from routes import admin, api, infra, stripe, wallet
+from util.approve import Approve
+# Import middleware
+from util.authentication import Authentication
+# Import error handling
+from util.errors import Errors
+# Import the page rendering library
+from util.kennelish import Kennelish
+# Import options
+from util.options import Options
 
 ### TODO: TEMP
 os.environ["OAUTHLIB_INSECURE_TRANSPORT"] = "0"

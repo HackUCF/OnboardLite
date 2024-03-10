@@ -1,19 +1,16 @@
-import boto3
-from boto3.dynamodb.conditions import Attr
+from typing import Optional
 
-from fastapi import APIRouter, Cookie, Request, HTTPException
+import boto3
+import stripe
+from boto3.dynamodb.conditions import Attr
+from fastapi import APIRouter, Cookie, HTTPException, Request
 from fastapi.responses import RedirectResponse
 from fastapi.templating import Jinja2Templates
 
-
-from typing import Optional
-
+from util.approve import Approve
 from util.authentication import Authentication
 from util.errors import Errors
 from util.options import Options
-from util.approve import Approve
-
-import stripe
 
 options = Options.fetch()
 templates = Jinja2Templates(directory="templates")

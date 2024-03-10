@@ -1,8 +1,10 @@
 import smtplib
-from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
-from util.options import Options
+from email.mime.text import MIMEText
+
 import commonmark
+
+from util.options import Options
 
 options = Options.fetch()
 

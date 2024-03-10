@@ -1,23 +1,19 @@
+from typing import Optional
+
 import boto3
 from boto3.dynamodb.conditions import Attr
-
+from fastapi import APIRouter, Body, Cookie, Request, Response
+from fastapi.encoders import jsonable_encoder
+from fastapi.templating import Jinja2Templates
 from jose import jwt
 
-from fastapi import APIRouter, Cookie, Request, Response, Body
-from fastapi.templating import Jinja2Templates
-from fastapi.encoders import jsonable_encoder
-
-
-from typing import Optional
 from models.user import UserModelMutable
-
-from util.authentication import Authentication
-from util.errors import Errors
-from util.options import Options
 from util.approve import Approve
+from util.authentication import Authentication
 from util.discord import Discord
 from util.email import Email
-
+from util.errors import Errors
+from util.options import Options
 
 options = Options.fetch()
 

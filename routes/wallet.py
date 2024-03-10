@@ -1,22 +1,18 @@
 import json
-import requests
 import os
 import uuid
+from typing import Optional
 
 import boto3
-
+import requests
+from airpress import PKPass
 from fastapi import APIRouter, Cookie, Request, Response
 
-
-from typing import Optional
-from models.user import PublicContact
 from models.info import InfoModel
-
+from models.user import PublicContact
 from util.authentication import Authentication
 from util.errors import Errors
 from util.options import Options
-
-from airpress import PKPass
 
 options = Options.fetch()
 

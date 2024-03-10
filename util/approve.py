@@ -1,13 +1,13 @@
 import os
 
 import boto3
-from python_terraform import Terraform
 import openstack
+from python_terraform import Terraform
 
-from util.horsepass import HorsePass
-from util.options import Options
 from util.discord import Discord
 from util.email import Email
+from util.horsepass import HorsePass
+from util.options import Options
 
 options = Options.fetch()
 tf = Terraform(working_dir=options.get("infra", {}).get("tf_directory", "./"))

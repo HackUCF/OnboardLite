@@ -1,7 +1,8 @@
-import redis
 import time
 from functools import wraps
-from fastapi import Request, HTTPException, status
+
+import redis
+from fastapi import HTTPException, Request, status
 
 
 class RateLimiter:

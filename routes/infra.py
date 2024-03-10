@@ -1,28 +1,24 @@
-import boto3
+import asyncio
 import json
 import os
-
-
-from fastapi import APIRouter, Cookie, Request
-from fastapi.templating import Jinja2Templates
-from fastapi.responses import FileResponse
-
-
 from typing import Optional
+
+import boto3
+import openstack
+from fastapi import APIRouter, Cookie, Request
+from fastapi.responses import FileResponse
+from fastapi.templating import Jinja2Templates
+from python_terraform import Terraform
+
 from models.info import InfoModel
 from models.user import PublicContact
-
-from util.authentication import Authentication
-from util.errors import Errors
-from util.options import Options
 from util.approve import Approve
+from util.authentication import Authentication
 from util.discord import Discord
 from util.email import Email
+from util.errors import Errors
 from util.limiter import RateLimiter
-
-from python_terraform import Terraform
-import openstack
-import asyncio
+from util.options import Options
 
 options = Options.fetch()
 
