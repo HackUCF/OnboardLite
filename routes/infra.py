@@ -132,7 +132,7 @@ async def teardown():
                     conn.network.delete_port(port_id)
                 try:
                     conn.network.delete_router(resource)
-                except:
+                except: # noqa
                     print("\t\t\t\tFailed and gave up.")
 
     print("\tNetworks...")
@@ -148,11 +148,11 @@ async def teardown():
                     print(f"\t\t\tdelete port: {port_id}")
                     try:
                         conn.network.delete_port(port_id)
-                    except:
+                    except: # noqa
                         pass
                 try:
                     conn.network.delete_network(resource)
-                except:
+                except: #noqa
                     print("\t\t\t\tFailed and gave up.")
     print("\tDone!")
 
