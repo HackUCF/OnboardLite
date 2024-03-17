@@ -240,7 +240,7 @@ async def aapl_gen(
     payload: Optional[object] = {},
 ):
     dynamodb = boto3.resource("dynamodb")
-    table = dynamodb.Table(options.get("aws").get("dynamodb").get("table"))
+    table = dynamodb.Table(options["aws"]["dynamodb"]["table"])
 
     # Get data from DynamoDB
     user_data = table.get_item(Key={"id": payload.get("id")}).get("Item", None)

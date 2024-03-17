@@ -16,6 +16,7 @@ from util.errors import Errors
 from util.options import Options
 
 options = Options.fetch()
+DYNAMO_USERS_TABLE = options['aws']['dynamodb']['table']
 
 templates = Jinja2Templates(directory="templates")
 
@@ -30,8 +31,8 @@ async def admin(request: Request, token: Optional[str] = Cookie(None)):
     """
     payload = jwt.decode(
         token,
-        options.get("jwt").get("secret"),
-        algorithms=options.get("jwt").get("algorithm"),
+        options["jwt"]["secret"],
+        algorithms=options["jwt"]["algorithm"],
     )
     return templates.TemplateResponse(
         "admin_searcher.html",
@@ -66,7 +67,7 @@ async def get_infra(
 
     # Get user data
     dynamodb = boto3.resource("dynamodb")
-    table = dynamodb.Table(options.get("aws").get("dynamodb").get("table"))
+    table = dynamodb.Table(DYNAMO_USERS_TABLE)
 
     user_data = table.get_item(Key={"id": member_id}).get("Item", None)
 
@@ -75,16 +76,16 @@ async def get_infra(
 
 We are happy to grant you Hack@UCF Private Cloud access!
 
-These credentials can be used to the Hack@UCF Private Cloud. This can be accessed at {options.get('infra', {}).get('horizon')} while on the CyberLab WiFi.
+These credentials can be used to the Hack@UCF Private Cloud. This can be accessed at {options['infra']['horizon']} while on the CyberLab WiFi.
 
 ```
 Username: {creds.get('username', 'Not Set')}
-Password: {creds.get('password', f"Please visit https://{options.get('http', {}).get('domain')}/profile and under Danger Zone, reset your Infra creds.")}
+Password: {creds.get('password', f"Please visit https://{options['http']['domain']}/profile and under Danger Zone, reset your Infra creds.")}
 ```
 
 By using the Hack@UCF Infrastructure, you agree to the following EULA located at https://help.hackucf.org/misc/eula
 
-The password for the `Cyberlab` WiFi is currently `{options.get('infra', {}).get('wifi')}`, but this is subject to change (and we'll let you know when that happens).
+The password for the `Cyberlab` WiFi is currently `{options['infra']['wifi']}`, but this is subject to change (and we'll let you know when that happens).
 
 Happy Hacking,
   - Hack@UCF Bot
@@ -112,7 +113,7 @@ async def get_refresh(
     Approve.approve_member(member_id)
 
     dynamodb = boto3.resource("dynamodb")
-    table = dynamodb.Table(options.get("aws").get("dynamodb").get("table"))
+    table = dynamodb.Table(DYNAMO_USERS_TABLE)
     data = table.get_item(Key={"id": member_id}).get("Item", None)
 
     if not data:
@@ -135,7 +136,7 @@ async def admin_get_single(
         return {"data": {}, "error": "Missing ?member_id"}
 
     dynamodb = boto3.resource("dynamodb")
-    table = dynamodb.Table(options.get("aws").get("dynamodb").get("table"))
+    table = dynamodb.Table(DYNAMO_USERS_TABLE)
     data = table.get_item(Key={"id": member_id}).get("Item", None)
 
     if not data:
@@ -159,7 +160,7 @@ async def admin_get_snowflake(
         return {"data": {}, "error": "Missing ?discord_id"}
 
     dynamodb = boto3.resource("dynamodb")
-    table = dynamodb.Table(options.get("aws").get("dynamodb").get("table"))
+    table = dynamodb.Table(DYNAMO_USERS_TABLE)
     data = table.scan(FilterExpression=Attr("discord_id").eq(str(discord_id))).get(
         "Items"
     )
@@ -196,7 +197,7 @@ async def admin_post_discord_message(
         return {"data": {}, "error": "Missing ?member_id"}
 
     dynamodb = boto3.resource("dynamodb")
-    table = dynamodb.Table(options.get("aws").get("dynamodb").get("table"))
+    table = dynamodb.Table(DYNAMO_USERS_TABLE)
     data = table.get_item(Key={"id": member_id}).get("Item", None)
 
     if not data:
@@ -225,7 +226,7 @@ async def admin_edit(
     member_id = input_data.id
 
     dynamodb = boto3.resource("dynamodb")
-    table = dynamodb.Table(options.get("aws").get("dynamodb").get("table"))
+    table = dynamodb.Table(DYNAMO_USERS_TABLE)
     old_data = table.get_item(Key={"id": member_id}).get("Item", None)
 
     if not old_data:
@@ -255,7 +256,7 @@ async def admin_list(request: Request, token: Optional[str] = Cookie(None)):
     API endpoint that dumps all users as JSON.
     """
     dynamodb = boto3.resource("dynamodb")
-    table = dynamodb.Table(options.get("aws").get("dynamodb").get("table"))
+    table = dynamodb.Table(DYNAMO_USERS_TABLE)
     data = table.scan().get("Items", None)
     return {"data": data}
 
@@ -267,7 +268,7 @@ async def admin_list_csv(request: Request, token: Optional[str] = Cookie(None)):
     API endpoint that dumps all users as CSV.
     """
     dynamodb = boto3.resource("dynamodb")
-    table = dynamodb.Table(options.get("aws").get("dynamodb").get("table"))
+    table = dynamodb.Table(DYNAMO_USERS_TABLE)
     data = table.scan().get("Items", None)
 
     output = "Membership ID, First Name, Last Name, NID, Is Returning, Gender, Major, Class Standing, Shirt Size, Discord Username, Experience, Cyber Interests, Event Interest, Is C3 Interest, Comments, Ethics Form Timestamp, Minecraft, Infra Email\n"

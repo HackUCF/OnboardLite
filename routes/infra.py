@@ -21,6 +21,7 @@ from util.limiter import RateLimiter
 from util.options import Options
 
 options = Options.fetch()
+DYNAMO_USERS_TABLE = options['aws']['dynamodb']['table']
 
 templates = Jinja2Templates(directory="templates")
 
@@ -29,9 +30,9 @@ router = APIRouter(prefix="/infra", tags=["Infra"], responses=Errors.basic_http(
 tf = Terraform(working_dir="./")
 
 rate_limiter = RateLimiter(
-    options.get("redis").get("host"),
-    options.get("redis").get("port"),
-    options.get("redis").get("db"),
+    options["redis"]["host"],
+    options["redis"]["port"],
+    options["redis"]["db"],
 )
 
 rate_limiter.get_redis()
@@ -60,8 +61,8 @@ async def create_resource(project, callback_discord_id=None):
     print(f"Creating resources for {proj_name}...")
 
     tf_vars = {
-        "username": options.get("infra", {}).get("ad", {}).get("username"),
-        "password": options.get("infra", {}).get("ad", {}).get("password"),
+        "username": options["infra"]["ad"]['username'],
+        "password": options["infra"]["ad"]['password'],
         "tenant_name": proj_name,
         "gbmname": shitty_database.get("gbmName"),
         "imageid": shitty_database.get("imageId"),
@@ -87,7 +88,7 @@ async def create_resource(project, callback_discord_id=None):
     if callback_discord_id:
         resource_create_msg = f"""Hello!
 
-Your requested virtual machine has been created! You can now view it at {options.get('infra', {}).get('horizon')}.
+Your requested virtual machine has been created! You can now view it at {options['infra']['horizon']}
 
 Enjoy,
     - Hack@UCF Bot
@@ -286,7 +287,7 @@ async def get_infra(
 
     # Get user data
     dynamodb = boto3.resource("dynamodb")
-    table = dynamodb.Table(options.get("aws").get("dynamodb").get("table"))
+    table = dynamodb.Table(DYNAMO_USERS_TABLE)
 
     user_data = table.get_item(Key={"id": member_id}).get("Item", None)
 
@@ -295,14 +296,14 @@ async def get_infra(
 
 You have requested to reset your Hack@UCF Infrastructure credentials. This change comes with new credentials.
 
-A reminder that you can use these credentials at {options.get('infra', {}).get('horizon')} while on the CyberLab WiFi.
+A reminder that you can use these credentials at {options['infra']['horizon']} while on the CyberLab WiFi.
 
 ```
 Username: {creds.get('username', 'Not Set')}
-Password: {creds.get('password', f"Please visit https://{options.get('http', {}).get('domain')}/profile and under Danger Zone, reset your Infra creds.")}
+Password: {creds.get('password', f"Please visit https://{options['http']['domain']}/profile and under Danger Zone, reset your Infra creds.")}
 ```
 
-The password for the `Cyberlab` WiFi is currently `{options.get('infra', {}).get('wifi')}`, but this is subject to change (and we'll let you know when that happens).
+The password for the `Cyberlab` WiFi is currently `{options['infra']['wifi']}`, but this is subject to change (and we'll let you know when that happens).
 
 By using the Hack@UCF Infrastructure, you agree to the following EULA located at https://help.hackucf.org/misc/eula
 

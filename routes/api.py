@@ -15,6 +15,7 @@ from util.kennelish import Kennelish, Transformer
 from util.options import Options
 
 options = Options.fetch()
+DYNAMO_USERS_TABLE = options['aws']['dynamodb']['table']
 
 router = APIRouter(prefix="/api", tags=["API"], responses=Errors.basic_http())
 
@@ -65,7 +66,7 @@ async def get_form_html(
 ):
     # AWS dependencies
     dynamodb = boto3.resource("dynamodb")
-    table = dynamodb.Table(options.get("aws").get("dynamodb").get("table"))
+    table = dynamodb.Table(DYNAMO_USERS_TABLE)
 
     # Get form object
     data = Options.get_form_body(num)
@@ -138,7 +139,7 @@ async def post_form(
 
     # AWS dependencies
     dynamodb = boto3.resource("dynamodb")
-    table = dynamodb.Table(options.get("aws").get("dynamodb").get("table"))
+    table = dynamodb.Table(DYNAMO_USERS_TABLE)
 
     # Push data back to DynamoDB
     try:

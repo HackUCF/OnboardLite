@@ -18,7 +18,7 @@ templates = Jinja2Templates(directory="templates")
 router = APIRouter(prefix="/pay", tags=["API"], responses=Errors.basic_http())
 
 # Set Stripe API key.
-stripe.api_key = options.get("stripe").get("api_key")
+stripe.api_key = options['stripe']['api_key']
 
 """
 Get API information.
@@ -34,7 +34,7 @@ async def get_root(
 ):
     # AWS dependencies
     dynamodb = boto3.resource("dynamodb")
-    table = dynamodb.Table(options.get("aws").get("dynamodb").get("table"))
+    table = dynamodb.Table(options['aws']['dynamodb']['table'])
 
     # Get data from DynamoDB
     user_data = table.get_item(Key={"id": payload.get("id")}).get("Item", None)
@@ -65,7 +65,7 @@ async def create_checkout_session(
 ):
     # AWS dependencies
     dynamodb = boto3.resource("dynamodb")
-    table = dynamodb.Table(options.get("aws").get("dynamodb").get("table"))
+    table = dynamodb.Table(options['aws']['dynamodb']['table'])
 
     # Get data from DynamoDB
     user_data = table.get_item(Key={"id": payload.get("id")}).get("Item", None)
@@ -76,14 +76,14 @@ async def create_checkout_session(
             line_items=[
                 {
                     # Provide the exact Price ID (for example, pr_1234) of the product you want to sell
-                    "price": options.get("stripe").get("price_id"),
+                    "price": options['stripe']['price_id'],
                     "quantity": 1,
                 },
             ],
             customer_email=stripe_email,
             mode="payment",
-            success_url=options.get("stripe").get("url").get("success"),
-            cancel_url=options.get("stripe").get("url").get("failure"),
+            success_url=options['stripe']['url']['success'],
+            cancel_url=options['stripe']['url']['failure']
         )
     except Exception as e:
         return str(e)
@@ -96,7 +96,7 @@ async def webhook(request: Request):
     payload = await request.body()
     sig_header = request.headers.get("stripe-signature")
     event = None
-    endpoint_secret = options.get("stripe").get("webhook_secret")
+    endpoint_secret = options['stripe']['webhook_secret']
 
     try:
         event = stripe.Webhook.construct_event(payload, sig_header, endpoint_secret)
@@ -137,7 +137,7 @@ def pay_dues(session):
 
     # AWS dependencies
     dynamodb = boto3.resource("dynamodb")
-    table = dynamodb.Table(options.get("aws").get("dynamodb").get("table"))
+    table = dynamodb.Table(options['aws']['dynamodb']['table'])
 
     # Get data from DynamoDB
     response = table.scan(FilterExpression=Attr("email").eq(customer_email)).get(

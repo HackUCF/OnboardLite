@@ -35,6 +35,7 @@ os.environ["OAUTHLIB_INSECURE_TRANSPORT"] = "0"
 ###
 
 options = Options.fetch()
+DYNAMO_USERS_TABLE = options['aws']['dynamodb']['table']
 
 # Initiate FastAPI.
 app = FastAPI()
@@ -49,15 +50,21 @@ app.include_router(wallet.router)
 app.include_router(infra.router)
 
 # Create the OpenStack SDK config.
+HORIZON_DOMAIN = options['infra']['horizon']
+HORIZON_PORT = 5000
+APP_CRED_ID = options['infra']['ad']['application_credential_id']
+APP_CRED_SECRET = options['infra']['ad']['application_credential_secret']
+REGION = "hack-ucf-0"
+
 with open("clouds.yaml", "w", encoding="utf-8") as f:
     f.write(
         f"""clouds:
   hackucf_infra:
     auth:
-      auth_url: {options.get('infra', {}).get('horizon', '')}:5000
-      application_credential_id: {options.get('infra', {}).get('ad', {}).get('application_credential_id', '')}
-      application_credential_secret: {options.get('infra', {}).get('ad', {}).get('application_credential_secret', '')}
-    region_name: "hack-ucf-0"
+      auth_url: {HORIZON_DOMAIN}:{HORIZON_PORT}
+      application_credential_id: {APP_CRED_ID}
+      application_credential_secret: {APP_CRED_SECRET}
+    region_name: "{REGION}"
     interface: "public"
     identity_api_version: 3
     auth_type: "v3applicationcredential"
@@ -80,8 +87,8 @@ async def index(request: Request, token: Optional[str] = Cookie(None)):
     try:
         payload = jwt.decode(
             token,
-            options.get("jwt").get("secret"),
-            algorithms=options.get("jwt").get("algorithm"),
+            options["jwt"]["secret"],
+            algorithms=options["jwt"]["algorithm"],
         )
         is_full_member: bool = payload.get("is_full_member", False)
         is_admin: bool = payload.get("sudo", False)
@@ -113,16 +120,15 @@ This is what is linked to by Onboard.
 async def oauth_transformer(redir: str = "/join/2"):
     # Open redirect check
     hostname = urlparse(redir).netloc
-    print(hostname)
-    if hostname != "" and hostname != options.get("http", {}).get(
+    if hostname != "" and hostname != options["http"].get(
         "domain", "my.hackucf.org"
     ):
         redir = "/join/2"
 
     oauth = OAuth2Session(
-        options.get("discord").get("client_id"),
-        redirect_uri=options.get("discord").get("redirect_base") + "_redir",
-        scope=options.get("discord").get("scope"),
+        options["discord"]["client_id"],
+        redirect_uri=options["discord"]["redirect_base"] + "_redir",
+        scope=options["discord"]["scope"],
     )
     authorization_url, state = oauth.authorization_url(
         "https://discord.com/api/oauth2/authorize"
@@ -151,7 +157,7 @@ async def oauth_transformer_new(
 ):
     # AWS dependencies
     dynamodb = boto3.resource("dynamodb")
-    table = dynamodb.Table(options.get("aws").get("dynamodb").get("table"))
+    table = dynamodb.Table(DYNAMO_USERS_TABLE)
 
     # Open redirect check
     if redir == "_redir":
@@ -159,7 +165,7 @@ async def oauth_transformer_new(
 
     hostname = urlparse(redir).netloc
 
-    if hostname != "" and hostname != options.get("http", {}).get(
+    if hostname != "" and hostname != options["http"].get(
         "domain", "my.hackucf.org"
     ):
         redir = "/join/2"
@@ -174,15 +180,15 @@ async def oauth_transformer_new(
 
     # Get data from Discord
     oauth = OAuth2Session(
-        options.get("discord").get("client_id"),
-        redirect_uri=options.get("discord").get("redirect_base") + "_redir",
-        scope=options.get("discord")["scope"],
+        options["discord"]["client_id"],
+        redirect_uri=options["discord"]["redirect_base"] + "_redir",
+        scope=options["discord"]["scope"],
     )
 
     token = oauth.fetch_token(
         "https://discord.com/api/oauth2/token",
-        client_id=options.get("discord").get("client_id"),
-        client_secret=options.get("discord").get("secret"),
+        client_id=options["discord"]["client_id"],
+        client_secret=options["discord"]["secret"],
         # authorization_response=code
         code=code,
     )
@@ -231,13 +237,13 @@ async def oauth_transformer_new(
         # Make user join the Hack@UCF Discord, if it's their first rodeo.
         discord_id = str(discordData["id"])
         headers = {
-            "Authorization": f"Bot {options.get('discord', {}).get('bot_token')}",
+            "Authorization": f"Bot {options['discord']['bot_token']}",
             "Content-Type": "application/json",
             "X-Audit-Log-Reason": "Hack@UCF OnboardLite Bot",
         }
         put_join_guild = {"access_token": token["access_token"]}
         requests.put(
-            f"https://discordapp.com/api/guilds/{options.get('discord', {}).get('guild_id')}/members/{discord_id}",
+            f"https://discordapp.com/api/guilds/{options['discord']['guild_id']}/members/{discord_id}",
             headers=headers,
             data=json.dumps(put_join_guild),
         )
@@ -286,8 +292,8 @@ async def oauth_transformer_new(
     }
     bearer = jwt.encode(
         jwtData,
-        options.get("jwt").get("secret"),
-        algorithm=options.get("jwt").get("algorithm"),
+        options['jwt']['secret'],
+        algorithm=options["jwt"]["algorithm"],
     )
     rr = RedirectResponse(redir, status_code=status.HTTP_302_FOUND)
     rr.set_cookie(key="token", value=bearer)
@@ -325,7 +331,7 @@ async def profile(
 ):
     # Get data from DynamoDB
     dynamodb = boto3.resource("dynamodb")
-    table = dynamodb.Table(options.get("aws").get("dynamodb").get("table"))
+    table = dynamodb.Table(DYNAMO_USERS_TABLE)
     print(token)
 
     user_data = table.get_item(Key={"id": payload.get("id")}).get("Item", None)
@@ -353,7 +359,7 @@ async def forms(
 ):
     # AWS dependencies
     dynamodb = boto3.resource("dynamodb")
-    table = dynamodb.Table(options.get("aws").get("dynamodb").get("table"))
+    table = dynamodb.Table(DYNAMO_USERS_TABLE)
 
     if num == "1":
         return RedirectResponse("/join/", status_code=status.HTTP_302_FOUND)

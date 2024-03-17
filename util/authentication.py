@@ -30,8 +30,8 @@ class Authentication:
             try:
                 payload = jwt.decode(
                     token,
-                    options.get("jwt").get("secret"),
-                    algorithms=options.get("jwt").get("algorithm"),
+                    options['jwt']['secret'],
+                    algorithms=options['jwt']['algorithm']
                 )
                 is_admin: bool = payload.get("sudo", False)
                 creation_date: float = payload.get("issued", -1)
@@ -52,9 +52,7 @@ class Authentication:
                     essay="If you think this is an error, please try logging in again.",
                 )
 
-            if time.time() > creation_date + options.get("jwt").get("lifetime").get(
-                "sudo"
-            ):
+            if time.time() > creation_date + options["jwt"]["lifetime"]["sudo"]:
                 return Errors.generate(
                     request,
                     403,
@@ -86,8 +84,8 @@ class Authentication:
             try:
                 payload = jwt.decode(
                     token,
-                    options.get("jwt").get("secret"),
-                    algorithms=options.get("jwt").get("algorithm"),
+                    options['jwt']['secret'],
+                    algorithms=options['jwt']['algorithm']
                 )
                 creation_date: float = payload.get("issued", -1)
             except Exception:
@@ -99,9 +97,7 @@ class Authentication:
                 tr.delete_cookie(key="token")
                 return tr
 
-            if time.time() > creation_date + options.get("jwt").get("lifetime").get(
-                "user"
-            ):
+            if time.time() > creation_date + options['jwt']['lifetime']['user']:
                 return Errors.generate(
                     request,
                     403,
