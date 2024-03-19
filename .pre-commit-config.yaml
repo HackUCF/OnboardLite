@@ -29,3 +29,5 @@ repos:
       - id: semgrep
         # See https://semgrep.dev/explore to select a ruleset and copy its URL
         args: ['--error', '--skip-unknown-extensions']
+ci:
+  skip: [semgrep]
