@@ -8,7 +8,7 @@ requirements-dev.txt:
 
 requirements.txt:
 	pip-compile requirements.in > requirements.txt
-	
+
 dev-deps: requirements-dev.txt
 	pip install -r requirements-dev.txt
 

@@ -3,7 +3,6 @@ from alembic import config, script
 from alembic.runtime import migration
 from sqlmodel import Session, SQLModel, create_engine
 from sqlmodel.pool import StaticPool
-
 from util.settings import Settings
 
 DATABASE_URL = Settings().database.url

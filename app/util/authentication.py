@@ -5,7 +5,6 @@ from typing import Optional
 from fastapi import Request, status
 from fastapi.responses import RedirectResponse
 from jose import jwt
-
 from models.user import UserModel
 
 # Import options and errors

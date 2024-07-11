@@ -5,10 +5,9 @@ import stripe
 from fastapi import APIRouter, Cookie, Depends, HTTPException, Request
 from fastapi.responses import RedirectResponse
 from fastapi.templating import Jinja2Templates
+from models.user import UserModel, user_to_dict
 from sqlalchemy.orm import selectinload
 from sqlmodel import Session, select
-
-from models.user import UserModel, user_to_dict
 from util.approve import Approve
 from util.authentication import Authentication
 from util.database import get_session

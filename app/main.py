@@ -12,15 +12,15 @@ from fastapi.responses import FileResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from jose import jwt
-from requests_oauthlib import OAuth2Session
-from sqlalchemy.orm import selectinload
-from sqlmodel import Session, select
 
 # Import data types
 from models.user import DiscordModel, EthicsFormModel, UserModel, user_to_dict
+from requests_oauthlib import OAuth2Session
 
 # Import routes
 from routes import admin, api, infra, stripe, wallet
+from sqlalchemy.orm import selectinload
+from sqlmodel import Session, select
 from util.approve import Approve
 
 # Import middleware

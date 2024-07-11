@@ -109,7 +109,7 @@ class DiscordConfig(BaseModel):
     enable: Optional[bool] = True
 
 
-if settings.get('discord'):
+if settings.get("discord"):
     discord_config = DiscordConfig(**settings["discord"])
 else:
     logger.warn("Missing discord config")
@@ -200,7 +200,7 @@ class KeycloakConfig(BaseModel):
     relam: str
 
 
-if settings.get('keycloak'):
+if settings.get("keycloak"):
     keycloak_config = KeycloakConfig(**settings["keycloak"])
 else:
     keycloak_config = None
@@ -220,7 +220,7 @@ class DatabaseConfig(BaseModel):
     url: str
 
 
-if settings.get('database'):
+if settings.get("database"):
     database_config = DatabaseConfig(**settings["database"])
 else:
     database_config = None
@@ -232,7 +232,8 @@ class RedisConfig(BaseModel):
     port: int
     db: int
 
-if settings.get('redis'):
+
+if settings.get("redis"):
     redis_config = RedisConfig(**settings["redis"])
 else:
     redis_config = None
@@ -260,7 +261,9 @@ class Settings(BaseSettings, metaclass=SingletonBaseSettingsMeta):
     stripe: StripeConfig = stripe_config
     email: EmailConfig = email_config
     jwt: JwtConfig = jwt_config
-    database: DatabaseConfig = database_config or DatabaseConfig(url="sqlite:///:memory:")
+    database: DatabaseConfig = database_config or DatabaseConfig(
+        url="sqlite:///:memory:"
+    )
     infra: InfraConfig = infra_config
     redis: RedisConfig = redis_config or RedisConfig(host="localhost", db=0, port=6379)
     http: HttpConfig = http_config

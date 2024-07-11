@@ -3,7 +3,6 @@ from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 
 import commonmark
-
 from util.settings import Settings
 
 email = Settings().email.email

@@ -3,11 +3,10 @@ import logging
 from typing import Optional
 
 from fastapi import APIRouter, Cookie, Depends, HTTPException, Request
-from sqlalchemy.orm import selectinload
-from sqlmodel import Session, select
-
 from models.info import InfoModel
 from models.user import PublicContact, UserModel, user_to_dict, user_update_instance
+from sqlalchemy.orm import selectinload
+from sqlmodel import Session, select
 from util.authentication import Authentication
 from util.database import get_session
 from util.errors import Errors

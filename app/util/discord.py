@@ -1,7 +1,6 @@
 import json
 
 import requests
-
 from util.settings import Settings
 
 headers = {
