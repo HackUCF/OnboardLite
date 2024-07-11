@@ -1,9 +1,8 @@
 from typing import List, Optional
 
-from pydantic import BaseModel
-
 # Import data types
-from app.models.user import PublicContact
+from models.user import PublicContact
+from pydantic import BaseModel
 
 
 class InfoModel(BaseModel):

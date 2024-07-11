@@ -6,14 +6,13 @@ from typing import Optional
 import requests
 from airpress import PKPass
 from fastapi import APIRouter, Cookie, Depends, Request, Response
+from models.info import InfoModel
+from models.user import PublicContact, UserModel, user_to_dict
 from sqlalchemy.orm import selectinload
 from sqlmodel import select
-
-from app.models.info import InfoModel
-from app.models.user import PublicContact, UserModel, user_to_dict
-from app.util.authentication import Authentication
-from app.util.database import get_session
-from app.util.errors import Errors
+from util.authentication import Authentication
+from util.database import get_session
+from util.errors import Errors
 
 router = APIRouter(
     prefix="/wallet", tags=["API", "MobileWallet"], responses=Errors.basic_http()
