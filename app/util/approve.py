@@ -5,12 +5,12 @@ from keycloak import KeycloakAdmin
 from sqlalchemy.orm import selectinload
 from sqlmodel import Session, select
 
-from app.models.user import UserModel
-from app.util.database import engine
-from app.util.discord import Discord
-from app.util.email import Email
-from app.util.horsepass import HorsePass
-from app.util.settings import Settings
+from models.user import UserModel
+from util.database import engine
+from util.discord import Discord
+from util.email import Email
+from util.horsepass import HorsePass
+from util.settings import Settings
 
 logger = logging.getLogger()
 

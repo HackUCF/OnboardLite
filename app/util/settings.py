@@ -30,6 +30,7 @@ def BitwardenConfig(settings: dict):
         ).stdout
     except Exception as e:
         logger.exception(e)
+        raise e
     bitwarden_settings = parse_json_to_dict(bitwarden_raw)
 
     bitwarden_mapping = {
@@ -67,8 +68,8 @@ def BitwardenConfig(settings: dict):
 settings = dict()
 
 # Reads config from ../config/options.yml
-here = os.path.abspath(os.path.dirname(__file__))
-with open(os.path.join(here, "../../config/options.yml")) as f:
+# here = os.path.abspath(os.path.dirname(__file__))
+with open("config.yml") as f:
     settings.update(yaml.load(f, Loader=yaml.FullLoader))
 
 
@@ -108,7 +109,10 @@ class DiscordConfig(BaseModel):
     enable: Optional[bool] = True
 
 
-discord_config = DiscordConfig(**settings["discord"])
+if settings.get('discord'):
+    discord_config = DiscordConfig(**settings["discord"])
+else:
+    logger.warn("Missing discord config")
 
 
 class StripeConfig(BaseModel):
@@ -196,7 +200,11 @@ class KeycloakConfig(BaseModel):
     relam: str
 
 
-keycloak_config = KeycloakConfig(**settings["keycloak"])
+if settings.get('keycloak'):
+    keycloak_config = KeycloakConfig(**settings["keycloak"])
+else:
+    keycloak_config = None
+    logger.warn("Missing Keycloak Config")
 
 
 class TelemetryConfig(BaseModel):
@@ -212,7 +220,11 @@ class DatabaseConfig(BaseModel):
     url: str
 
 
-database_config = DatabaseConfig(**settings["database"])
+if settings.get('database'):
+    database_config = DatabaseConfig(**settings["database"])
+else:
+    database_config = None
+    logger.warn("Missing database config")
 
 
 class RedisConfig(BaseModel):
@@ -220,8 +232,11 @@ class RedisConfig(BaseModel):
     port: int
     db: int
 
-
-redis_config = RedisConfig(**settings["redis"])
+if settings.get('redis'):
+    redis_config = RedisConfig(**settings["redis"])
+else:
+    redis_config = None
+    logger.warn("Missing redis config")
 
 
 class HttpConfig(BaseModel):
@@ -245,9 +260,9 @@ class Settings(BaseSettings, metaclass=SingletonBaseSettingsMeta):
     stripe: StripeConfig = stripe_config
     email: EmailConfig = email_config
     jwt: JwtConfig = jwt_config
-    database: DatabaseConfig = database_config
+    database: DatabaseConfig = database_config or DatabaseConfig(url="sqlite:///:memory:")
     infra: InfraConfig = infra_config
-    redis: RedisConfig = redis_config
+    redis: RedisConfig = redis_config or RedisConfig(host="localhost", db=0, port=6379)
     http: HttpConfig = http_config
-    keycloak: KeycloakConfig = keycloak_config
-    telemetry: TelemetryConfig = telemetry_config
+    keycloak: Optional[KeycloakConfig] = keycloak_config
+    telemetry: Optional[TelemetryConfig] = telemetry_config

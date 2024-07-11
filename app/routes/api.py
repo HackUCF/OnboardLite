@@ -6,13 +6,13 @@ from fastapi import APIRouter, Cookie, Depends, HTTPException, Request
 from sqlalchemy.orm import selectinload
 from sqlmodel import Session, select
 
-from app.models.info import InfoModel
-from app.models.user import PublicContact, UserModel, user_to_dict, user_update_instance
-from app.util.authentication import Authentication
-from app.util.database import get_session
-from app.util.errors import Errors
-from app.util.forms import Forms, apply_fuzzy_parsing, transform_dict
-from app.util.kennelish import Transformer
+from models.info import InfoModel
+from models.user import PublicContact, UserModel, user_to_dict, user_update_instance
+from util.authentication import Authentication
+from util.database import get_session
+from util.errors import Errors
+from util.forms import Forms, apply_fuzzy_parsing, transform_dict
+from util.kennelish import Transformer
 
 logger = logging.getLogger(__name__)
 

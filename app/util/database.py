@@ -4,7 +4,7 @@ from alembic.runtime import migration
 from sqlmodel import Session, SQLModel, create_engine
 from sqlmodel.pool import StaticPool
 
-from app.util.settings import Settings
+from util.settings import Settings
 
 DATABASE_URL = Settings().database.url
 # TODO remove echo=True

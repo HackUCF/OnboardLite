@@ -17,28 +17,28 @@ from sqlalchemy.orm import selectinload
 from sqlmodel import Session, select
 
 # Import data types
-from app.models.user import DiscordModel, EthicsFormModel, UserModel, user_to_dict
+from models.user import DiscordModel, EthicsFormModel, UserModel, user_to_dict
 
 # Import routes
-from app.routes import admin, api, infra, stripe, wallet
-from app.util.approve import Approve
+from routes import admin, api, infra, stripe, wallet
+from util.approve import Approve
 
 # Import middleware
-from app.util.authentication import Authentication
-from app.util.database import get_session, init_db
-from app.util.discord import Discord
+from util.authentication import Authentication
+from util.database import get_session, init_db
+from util.discord import Discord
 
 # Import error handling
-from app.util.errors import Errors
-from app.util.forms import Forms
+from util.errors import Errors
+from util.forms import Forms
 
 # Import the page rendering library
-from app.util.kennelish import Kennelish
+from util.kennelish import Kennelish
 
 # Import options
-from app.util.settings import Settings
+from util.settings import Settings
 
-if Settings().telemetry.enable:
+if Settings().telemetry and Settings().telemetry.enable:
     import sentry_sdk
 ### TODO: TEMP
 # os.environ["OAUTHLIB_INSECURE_TRANSPORT"] = "0"

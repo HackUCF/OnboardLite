@@ -4,18 +4,17 @@ from typing import Optional
 from fastapi import APIRouter, Cookie, Depends, Request
 from fastapi.responses import FileResponse
 from fastapi.templating import Jinja2Templates
+from models.info import InfoModel
+from models.user import PublicContact, UserModel
 from sqlmodel import Session, select
-
-from app.models.info import InfoModel
-from app.models.user import PublicContact, UserModel
-from app.util.approve import Approve
-from app.util.authentication import Authentication
-from app.util.database import get_session
-from app.util.discord import Discord
-from app.util.email import Email
-from app.util.errors import Errors
-from app.util.limiter import RateLimiter
-from app.util.settings import Settings
+from util.approve import Approve
+from util.authentication import Authentication
+from util.database import get_session
+from util.discord import Discord
+from util.email import Email
+from util.errors import Errors
+from util.limiter import RateLimiter
+from util.settings import Settings
 
 logger = logging.getLogger(__name__)
 

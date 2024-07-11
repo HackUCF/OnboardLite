@@ -6,11 +6,11 @@ from fastapi import Request, status
 from fastapi.responses import RedirectResponse
 from jose import jwt
 
-from app.models.user import UserModel
+from models.user import UserModel
 
 # Import options and errors
-from app.util.errors import Errors
-from app.util.settings import Settings
+from util.errors import Errors
+from util.settings import Settings
 
 
 class Authentication:

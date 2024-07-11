@@ -8,12 +8,12 @@ from fastapi.templating import Jinja2Templates
 from sqlalchemy.orm import selectinload
 from sqlmodel import Session, select
 
-from app.models.user import UserModel, user_to_dict
-from app.util.approve import Approve
-from app.util.authentication import Authentication
-from app.util.database import get_session
-from app.util.errors import Errors
-from app.util.settings import Settings
+from models.user import UserModel, user_to_dict
+from util.approve import Approve
+from util.authentication import Authentication
+from util.database import get_session
+from util.errors import Errors
+from util.settings import Settings
 
 templates = Jinja2Templates(directory="app/templates")
 
