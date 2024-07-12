@@ -3,7 +3,7 @@ from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 
 import commonmark
-from util.settings import Settings
+from .settings import Settings
 
 email = Settings().email.email
 password = Settings().email.password.get_secret_value()

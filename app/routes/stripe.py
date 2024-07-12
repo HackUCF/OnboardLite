@@ -5,14 +5,14 @@ import stripe
 from fastapi import APIRouter, Cookie, Depends, HTTPException, Request
 from fastapi.responses import RedirectResponse
 from fastapi.templating import Jinja2Templates
-from models.user import UserModel, user_to_dict
+from ..models.user import UserModel, user_to_dict
 from sqlalchemy.orm import selectinload
 from sqlmodel import Session, select
-from util.approve import Approve
-from util.authentication import Authentication
-from util.database import get_session
-from util.errors import Errors
-from util.settings import Settings
+from ..util.approve import Approve
+from ..util.authentication import Authentication
+from ..util.database import get_session
+from ..util.errors import Errors
+from ..util.settings import Settings
 
 templates = Jinja2Templates(directory="app/templates")
 

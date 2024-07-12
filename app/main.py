@@ -14,29 +14,29 @@ from fastapi.templating import Jinja2Templates
 from jose import jwt
 
 # Import data types
-from models.user import DiscordModel, EthicsFormModel, UserModel, user_to_dict
+from .models.user import DiscordModel, EthicsFormModel, UserModel, user_to_dict
 from requests_oauthlib import OAuth2Session
 
 # Import routes
-from routes import admin, api, infra, stripe, wallet
+from .routes import admin, api, infra, stripe, wallet
 from sqlalchemy.orm import selectinload
 from sqlmodel import Session, select
-from util.approve import Approve
+from .util.approve import Approve
 
 # Import middleware
-from util.authentication import Authentication
-from util.database import get_session, init_db
-from util.discord import Discord
+from .util.authentication import Authentication
+from .util.database import get_session, init_db
+from .util.discord import Discord
 
 # Import error handling
-from util.errors import Errors
-from util.forms import Forms
+from .util.errors import Errors
+from .util.forms import Forms
 
 # Import the page rendering library
-from util.kennelish import Kennelish
+from .util.kennelish import Kennelish
 
 # Import options
-from util.settings import Settings
+from .util.settings import Settings
 
 if Settings().telemetry and Settings().telemetry.enable:
     import sentry_sdk

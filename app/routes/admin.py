@@ -4,7 +4,7 @@ from typing import Optional
 from fastapi import APIRouter, Body, Cookie, Depends, Request, Response
 from fastapi.templating import Jinja2Templates
 from jose import jwt
-from models.user import (
+from ..models.user import (
     UserModel,
     UserModelMutable,
     user_to_dict,
@@ -12,13 +12,13 @@ from models.user import (
 )
 from sqlalchemy.orm import selectinload
 from sqlmodel import Session, select
-from util.approve import Approve
-from util.authentication import Authentication
-from util.database import get_session
-from util.discord import Discord
-from util.email import Email
-from util.errors import Errors
-from util.settings import Settings
+from ..util.approve import Approve
+from ..util.authentication import Authentication
+from ..util.database import get_session
+from ..util.discord import Discord
+from ..util.email import Email
+from ..util.errors import Errors
+from ..util.settings import Settings
 
 logger = logging.getLogger(__name__)
 

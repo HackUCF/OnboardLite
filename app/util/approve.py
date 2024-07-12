@@ -2,14 +2,14 @@ import logging
 import os
 
 from keycloak import KeycloakAdmin
-from models.user import UserModel
+from ..models.user import UserModel
 from sqlalchemy.orm import selectinload
 from sqlmodel import Session, select
-from util.database import engine
-from util.discord import Discord
-from util.email import Email
-from util.horsepass import HorsePass
-from util.settings import Settings
+from .database import engine
+from .discord import Discord
+from .email import Email
+from .horsepass import HorsePass
+from .settings import Settings
 
 logger = logging.getLogger()
 

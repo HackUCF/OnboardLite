@@ -1,7 +1,7 @@
 from typing import List, Optional
 
 # Import data types
-from models.user import PublicContact
+from ..models.user import PublicContact
 from pydantic import BaseModel
 
 
