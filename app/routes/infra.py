@@ -43,6 +43,7 @@ async def get_root():
         ],
     )
 
+ERR_VPN_CONFIG_NOT_FOUND = HTTPException(status_code=500, detail="HackUCF OpenVPN Config Not Found")
 
 @router.get("/openvpn")
 @Authentication.member
@@ -58,7 +59,7 @@ async def download_file(
     file_path = "../HackUCF.ovpn"
     if not Path(file_path).exists():
         ## Return 500 ISE
-        raise HTTPException(status_code=500, detail="HackUCF OpenVPN Config not Found")
+        raise ERR_VPN_CONFIG_NOT_FOUND
     else:
         return FileResponse(
             file_path, filename="HackUCF.ovpn", media_type="application/octet-stream"
