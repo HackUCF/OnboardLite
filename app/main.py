@@ -3,6 +3,8 @@ import uuid
 from typing import Optional
 from urllib.parse import urlparse
 
+import requests
+
 # FastAPI
 from fastapi import Cookie, Depends, FastAPI, Request, Response, status
 from fastapi.responses import FileResponse, RedirectResponse
@@ -144,7 +146,34 @@ This is what is linked to by Onboard.
 
 
 @app.get("/discord/new/")
-async def oauth_transformer(redir: str = "/join/2"):
+async def oauth_transformer(request: Request, redir: str = "/join/2"):
+    if not Settings().env == "dev":
+        hcaptcha_response = request.query_params.get("h-captcha-response")
+
+        if not hcaptcha_response:
+            return Errors.generate(
+                request,
+                403,
+                "Captcha failed. Please try again.",
+                return_url="/join",
+                return_text="Try Again",
+            )
+
+        hcaptcha_secret = Settings().captcha.secret.get_secret_value
+        verify_url = "https://hcaptcha.com/siteverify"
+        payload = {"secret": hcaptcha_secret, "response": hcaptcha_response}
+
+        response = requests.post(verify_url, data=payload)
+        result = response.json()
+
+        if not result.get("success"):
+            return Errors.generate(
+                request,
+                403,
+                "Captcha failed. Please try again.",
+                return_url="/join",
+                return_text="Try Again",
+            )
     # Open redirect check
     hostname = urlparse(redir).netloc
     if hostname != "" and hostname != Settings().http.domain:
@@ -161,7 +190,9 @@ async def oauth_transformer(redir: str = "/join/2"):
 
     rr = RedirectResponse(authorization_url, status_code=302)
 
-    rr.set_cookie(key="redir_endpoint", value=redir)
+    rr.set_cookie(key="redir_endpoint", value=redir, max_age=300)
+    captcha_cookie = Authentication.create_captcha_jwt()
+    rr.set_cookie(key="captcha", value=captcha_cookie, max_age=300)
 
     return rr
 
@@ -219,24 +250,25 @@ async def oauth_transformer_new(
     # Generate a new user ID or reuse an existing one.
     statement = select(UserModel).where(UserModel.discord_id == discordData["id"])
     user = session.exec(statement).one_or_none()
-    # TODO: Discuss removing
-    # BACKPORT: I didn't realize that Snowflakes were strings because of an integer overflow bug.
-    # So this will do a query for the "mistaken" value and then fix its data.
-    # if not query_for_id:
-    #    logger.info("Beginning Discord ID attribute migration...")
-    #    query_for_id = table.scan(
-    #        FilterExpression=Attr("discord_id").eq(int(discordData["id"]))
-    #    )
-    #    query_for_id = query_for_id.get("Items")
-    #
-    #    if query_for_id:
-    #        table.update_item(
-    #            Key={"id": query_for_id[0].get("id")},
-    #            UpdateExpression="SET discord_id = :discord_id",
-    #            ExpressionAttributeValues={":discord_id": str(discordData["id"])},
-    #        )
 
+    captcha = request.cookies.get("captcha")
     if not user:
+        if Settings().env != "dev":
+            if not Authentication.validate_captcha(token=captcha) or not captcha:
+                return Errors.generate(
+                    request,
+                    403,
+                    "Captcha failed. Please try again. Or timed out.",
+                    return_url="/join",
+                    return_text="Try Again",
+                )
+        if not discordData.get("verified"):
+            tr = Errors.generate(
+                request,
+                403,
+                "Discord email not verfied please try again",
+            )
+            return tr
         infra_email = ""
         discord_id = discordData["id"]
         Discord().join_hack_server(discord_id, token)
@@ -263,11 +295,31 @@ async def oauth_transformer_new(
     # Create JWT. This should be the only way to issue JWTs.
     bearer = Authentication.create_jwt(user)
     rr = RedirectResponse(redir, status_code=status.HTTP_302_FOUND)
-    rr.set_cookie(key="token", value=bearer)
-
+    if user.sudo:
+        max_age = Settings().jwt.lifetime_sudo
+    else:
+        max_age = Settings().jwt.lifetime_user
+    if Settings().env == "dev":
+        rr.set_cookie(
+            key="token",
+            value=bearer,
+            httponly=True,
+            samesite="lax",
+            secure=False,
+            max_age=max_age,
+        )
+    else:
+        rr.set_cookie(
+            key="token",
+            value=bearer,
+            httponly=True,
+            samesite="lax",
+            secure=True,
+            max_age=max_age,
+        )
     # Clear redirect cookie.
     rr.delete_cookie("redir_endpoint")
-
+    rr.delete_cookie("captcha")
     return rr
 
 
@@ -279,7 +331,9 @@ Renders the landing page for the sign-up flow.
 @app.get("/join/")
 async def join(request: Request, token: Optional[str] = Cookie(None)):
     if token is None:
-        return templates.TemplateResponse("signup.html", {"request": request})
+        return templates.TemplateResponse(
+            "signup.html", {"request": request, "site_key": Settings().captcha.site_key}
+        )
     else:
         return RedirectResponse("/join/2/", status_code=status.HTTP_302_FOUND)
 
