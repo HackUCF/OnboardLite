@@ -43,4 +43,4 @@ services:
           action: rebuild
           target: /app/requirements.txt
   redis:
-    image: redis:7.2
+    image: redis:7.4
