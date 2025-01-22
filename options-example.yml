@@ -1,5 +1,5 @@
 bws:
-    project_id: "your_project_id"
+    project_id: "your-project-id"
     enable: "false"
 
 jwt:
@@ -16,15 +16,14 @@ infra:
     horizon: "https://horizon.hackucf.org"
 
 discord:
-    client_id: "your_discord_client_id_here"
+    client_id: "1"
     secret: "your_discord_secret_here"
     redirect_base: "https://join.hackucf.org/api/oauth/?redir="
     scope: "email identify guilds.join"
-    bot_token: "your_discord_bot_token_here"
-    guild_id: "your_guild_id_here"
-    member_role: "your_member_role_id_here"
+    bot_token: "1"
+    guild_id: "1"
+    member_role: "1"
     enable: false
-
 stripe:
     api_key: "your_stripe_api_key_here"
     webhook_secret: "your_stripe_webhook_secret_here"
@@ -42,7 +41,21 @@ email:
 telemetry:
     url: "your_telemetry_url_here"
     enable: false
+keycloak:
+  username: "admin-test"
+  password: "test"
+  realm: "test"
+  url: https://example.com
+  enable: false
 
+google_wallet:
+  auth_json: >
+    {
+    "type": "service_account",
+    }
+  issuer_id: "1"
+  class_suffix: "hack_onboard_generic_v1"
+  enable: false
 database:
-    url: "sqlite:////data/database.db"  # For docker create database/
-    #url: "sqlite:///database/database.db" # For local dev create database/
+  #url: "sqlite:////data/database.db"  # For docker create database/
+    url: "sqlite:///database/database.db" # For local dev create database/

@@ -28,6 +28,8 @@ def BitwardenConfig(settings: dict):
     The bitwarden secrets are mapped to the settings dict using the bitwarden_mapping dict.
     The secrets are sourced based on a project id in the settings dict.
     """
+    if settings["bws"]["enable"] == "false":
+        return settings
     logger.debug("Loading secrets from Bitwarden")
     try:
         project_id = settings["bws"]["project_id"]
