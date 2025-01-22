@@ -13,6 +13,7 @@ source ./.venv/bin/activate
 python3 -m pip install -r requirements.txt
 python3 -m pip install -r requirements-dev.txt
 pre-commit install
+mkdir ./config
 cp options-example.yml ./config/options.yml
 ```
 Goto https://discord.com/developers/applications create an application. Then under oauth2 get client id and client sceret set redir url to ``http://localhost:8000/api/oauth/?redir=_redir``
