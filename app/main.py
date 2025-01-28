@@ -1,6 +1,7 @@
 # SPDX-License-Identifier: MIT
 # Copyright (c) 2024 Collegiate Cyber Defense Club
 import logging
+import os
 import uuid
 from typing import Optional
 from urllib.parse import urlparse
@@ -397,3 +398,53 @@ async def logout(request: Request):
 @app.get("/favicon.ico", include_in_schema=False)
 async def favicon():
     return FileResponse("./app/static/favicon.ico")
+
+
+# This check is a little hacky and needs to be documented in the dev environment set up
+# If it's run under docker, the -e flag should set the env variable, but if its local you have to set it yourself
+# Use 'export ENV=development' to set the env variable
+if os.getenv("ENV") == "development":
+
+    @app.get("/dev/user")
+    async def create_dev_user(request: Request, session: Session = Depends(get_session)):
+        if request.client.host not in ["127.0.0.1", "localhost"]:
+            return Errors.generate(
+                request,
+                403,
+                "Forbidden",
+                essay="This endpoint is only available on localhost.",
+            )
+
+        # Generate random user data
+        user_id = uuid.uuid4()
+        discord_id = str(uuid.uuid4())
+
+        user = UserModel(
+            id=user_id,
+            discord_id=discord_id,
+        )
+
+        discord_user = DiscordModel(username=f"devuser-{user_id}", email=f"devuser@mail.com", user_id=user_id, user=user)
+
+        session.add(user)
+        session.commit()
+        session.refresh(user)
+
+        session.add(discord_user)
+        session.commit()
+        session.refresh(discord_user)
+
+        # Create JWT token for the user
+        bearer = Authentication.create_jwt(user)
+        rr = RedirectResponse("/profile", status_code=status.HTTP_302_FOUND)
+        max_age = Settings().jwt.lifetime_sudo
+        rr.set_cookie(
+            key="token",
+            value=bearer,
+            httponly=True,
+            samesite="lax",
+            secure=False,
+            max_age=max_age,
+        )
+
+        return rr
