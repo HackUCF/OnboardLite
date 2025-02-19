@@ -26,6 +26,12 @@ from app.models.user import (
 
 # Import routes
 from app.routes import admin, api, infra, stripe, wallet
+
+# This check is a little hacky and needs to be documented in the dev environment set up
+# If it's run under docker, the -e flag should set the env variable, but if its local you have to set it yourself
+# Use 'export ENV=development' to set the env variable
+if os.getenv("ENV") == "development":
+    from app.routes import dev_auth
 from app.util.approve import Approve
 
 # Import middleware
@@ -94,6 +100,14 @@ app.include_router(stripe.router)
 app.include_router(admin.router)
 app.include_router(wallet.router)
 app.include_router(infra.router)
+
+# This check is a little hacky and needs to be documented in the dev environment set up
+# If it's run under docker, the -e flag should set the env variable, but if its local you have to set it yourself
+# Use 'export ENV=development' to set the env variable
+if os.getenv("ENV") == "development":
+    logger.warning("loading dev endpoints")
+    app.include_router(dev_auth.router)
+
 
 # TODO figure out wtf this is used for
 # Create the OpenStack SDK config.
@@ -398,53 +412,3 @@ async def logout(request: Request):
 @app.get("/favicon.ico", include_in_schema=False)
 async def favicon():
     return FileResponse("./app/static/favicon.ico")
-
-
-# This check is a little hacky and needs to be documented in the dev environment set up
-# If it's run under docker, the -e flag should set the env variable, but if its local you have to set it yourself
-# Use 'export ENV=development' to set the env variable
-if os.getenv("ENV") == "development":
-
-    @app.get("/dev/user")
-    async def create_dev_user(request: Request, session: Session = Depends(get_session)):
-        if request.client.host not in ["127.0.0.1", "localhost"]:
-            return Errors.generate(
-                request,
-                403,
-                "Forbidden",
-                essay="This endpoint is only available on localhost.",
-            )
-
-        # Generate random user data
-        user_id = uuid.uuid4()
-        discord_id = str(uuid.uuid4())
-
-        user = UserModel(
-            id=user_id,
-            discord_id=discord_id,
-        )
-
-        discord_user = DiscordModel(username=f"devuser-{user_id}", email=f"devuser@mail.com", user_id=user_id, user=user)
-
-        session.add(user)
-        session.commit()
-        session.refresh(user)
-
-        session.add(discord_user)
-        session.commit()
-        session.refresh(discord_user)
-
-        # Create JWT token for the user
-        bearer = Authentication.create_jwt(user)
-        rr = RedirectResponse("/profile", status_code=status.HTTP_302_FOUND)
-        max_age = Settings().jwt.lifetime_sudo
-        rr.set_cookie(
-            key="token",
-            value=bearer,
-            httponly=True,
-            samesite="lax",
-            secure=False,
-            max_age=max_age,
-        )
-
-        return rr
