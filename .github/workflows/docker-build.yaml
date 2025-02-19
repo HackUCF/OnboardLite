@@ -7,6 +7,7 @@ on:
   pull_request:
     branches:
       - main
+      - dev
 
 jobs:
   build:
@@ -22,5 +23,25 @@ jobs:
       - name: Build Docker image
         run: docker build . --target prod -t onboardlite
 
-      - name: Verify Docker image
-        run: docker run -e ONBOARD_ENV=dev --rm onboardlite echo "Docker image built successfully!"
+      - name: Run Docker container
+        run: docker run -d -p 8000:8000 --name onboardlite_container onboardlite
+
+     - name: sleep 10 seconds
+        run: sleep 10
+
+      - name: Wait for container to be ready
+        run: |
+          for i in {1..30}; do
+            if curl -s -v http://localhost:8000/; then
+              exit 0
+            fi
+            sleep 1
+          done
+          docker logs onboardlite_container
+          exit 1
+
+      - name: Verify homepage
+        run: curl -f -v http://localhost:8000/
+
+      - name: Stop and remove Docker container
+        run: docker stop onboardlite_container && docker rm onboardlite_container
