@@ -26,7 +26,7 @@ jobs:
       - name: Run Docker container
         run: docker run -d -p 8000:8000 --name onboardlite_container onboardlite
 
-     - name: sleep 10 seconds
+      - name: sleep 10 seconds
         run: sleep 10
 
       - name: Wait for container to be ready
