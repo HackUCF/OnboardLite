@@ -81,6 +81,9 @@ async def create_dev_user(request: Request, session: Session = Depends(get_sessi
 
     return """
     <html>
+        <head>
+            <link rel="stylesheet" type="text/css" href="/static/hackucf.css">
+        </head>
         <body>
             <form action="/dev/select_user/" method="post">
                 <label for="user">Select User:</label>
