@@ -1,6 +1,7 @@
 # SPDX-License-Identifier: MIT
 # Copyright (c) 2024 Collegiate Cyber Defense Club
 import logging
+import os
 import uuid
 from typing import Optional
 from urllib.parse import urlparse
@@ -25,6 +26,12 @@ from app.models.user import (
 
 # Import routes
 from app.routes import admin, api, infra, stripe, wallet
+
+# This check is a little hacky and needs to be documented in the dev environment set up
+# If it's run under docker, the -e flag should set the env variable, but if its local you have to set it yourself
+# Use 'export ENV=development' to set the env variable
+if os.getenv("ENV") == "development":
+    from app.routes import dev_auth
 from app.util.approve import Approve
 
 # Import middleware
@@ -93,6 +100,14 @@ app.include_router(stripe.router)
 app.include_router(admin.router)
 app.include_router(wallet.router)
 app.include_router(infra.router)
+
+# This check is a little hacky and needs to be documented in the dev environment set up
+# If it's run under docker, the -e flag should set the env variable, but if its local you have to set it yourself
+# Use 'export ENV=development' to set the env variable
+if os.getenv("ENV") == "development":
+    logger.warning("loading dev endpoints")
+    app.include_router(dev_auth.router)
+
 
 # TODO figure out wtf this is used for
 # Create the OpenStack SDK config.
