@@ -37,5 +37,5 @@ dev = [
     "pre-commit==4.0.1",
     "pytest>=8.3.5",
     "semgrep==1.108.0",
-    "virtualenv==20.29.2",
+    "virtualenv==20.32.0",
 ]
