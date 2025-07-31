@@ -18,7 +18,7 @@ dependencies = [
     "passwordgenerator==1.5.1",
     "pydantic==2.10.6",
     "pydantic-settings==2.7.1",
-    "pyopenssl==22.1.0",
+    "pyopenssl==25.1.0",
     "python-dateutil==2.9.0.post0",
     "python-keycloak==5.1.1",
     "pyyaml==6.0.2",
