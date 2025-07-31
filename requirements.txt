@@ -11,7 +11,7 @@ pydantic_settings==2.7.1
 python-dateutil==2.9.0.post0
 joserfc==1.0.1
 PyYAML==6.0.2
-requests==2.32.3
+requests==2.32.4
 requests-oauthlib==2.0.0
 stripe==11.4.1
 typing_extensions==4.12.2
