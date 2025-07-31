@@ -20,7 +20,7 @@ dependencies = [
     "pydantic-settings==2.7.1",
     "pyopenssl==22.1.0",
     "python-dateutil==2.9.0.post0",
-    "python-keycloak==5.1.1",
+    "python-keycloak==5.7.0",
     "pyyaml==6.0.2",
     "requests==2.32.3",
     "requests-oauthlib==2.0.0",
