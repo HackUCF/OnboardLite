@@ -9,7 +9,7 @@ passwordgenerator==1.5.1
 pydantic==2.10.6
 pydantic_settings==2.7.1
 python-dateutil==2.9.0.post0
-joserfc==1.0.1
+joserfc==1.2.2
 PyYAML==6.0.2
 requests==2.32.3
 requests-oauthlib==2.0.0
