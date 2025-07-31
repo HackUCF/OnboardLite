@@ -40,6 +40,6 @@ COPY ./app ./app
 EXPOSE 8000
 
 # Start the FastAPI application
-ENTRYPOINT ["/bin/python3", "app/entry.py"]
+ENTRYPOINT ["uv", "run", "app/entry.py"]
 
 CMD []
