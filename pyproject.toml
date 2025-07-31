@@ -26,7 +26,7 @@ dependencies = [
     "requests-oauthlib==2.0.0",
     "sentry-sdk==2.22.0",
     "sqlmodel==0.0.22",
-    "stripe==11.4.1",
+    "stripe==12.4.0",
     "typing-extensions==4.12.2",
     "uvicorn==0.34.0",
 ]
