@@ -27,9 +27,13 @@ CMD ["uv", "run", "pytest"]
 
 FROM base as prod
 
-COPY requirements.txt .
+COPY pyproject.toml .
+COPY uv.lock .
 
-RUN uv sync
+ENV UV_LINK_MODE=copy
+
+RUN --mount=type=cache,target=/root/.cache/uv \
+    uv sync --locked --compile-bytecode
 
 COPY ./app ./app
 
