@@ -1,6 +1,6 @@
 airpress==1.0.3
 cryptography==38.0.0
-pyOpenSSL==22.1.0
+pyOpenSSL==25.1.0
 asyncio==3.4.3
 commonmark==0.9.1
 fastapi[standard]==0.115.8
