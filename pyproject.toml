@@ -10,7 +10,7 @@ dependencies = [
     "asyncio==3.4.3",
     "commonmark==0.9.1",
     "cryptography==38.0.0",
-    "fastapi[standard]==0.115.8",
+    "fastapi[standard]==0.116.1",
     "google-api-python-client==2.161.0",
     "google-auth==2.37.0",
     "jinja2==3.1.5",
