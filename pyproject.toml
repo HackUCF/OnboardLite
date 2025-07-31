@@ -6,7 +6,7 @@ readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
     "airpress==1.0.3",
-    "alembic==1.14.1",
+    "alembic==1.16.4",
     "asyncio==3.4.3",
     "commonmark==0.9.1",
     "cryptography==38.0.0",
