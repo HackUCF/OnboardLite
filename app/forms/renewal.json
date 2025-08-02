@@ -23,20 +23,6 @@
         "input": "email",
         "key": "email",
         "required": true
-      },
-      {
-        "label": "NID",
-        "caption": "This is the UCF identifier with two letters and six numbers. It's in your school email!",
-        "input": "nid",
-        "key": "nid",
-        "required": true
-      },
-      {
-        "label": "Minecraft username",
-        "caption": "If you have a Minecraft account, put your username here to join our members-only Minecraft server.",
-        "input": "text",
-        "key": "minecraft",
-        "required": false
       }
     ]
   },
