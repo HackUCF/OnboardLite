@@ -78,6 +78,7 @@ class UserModel(SQLModel, table=True):
     gender: Optional[str] = ""
     major: Optional[str] = ""
     class_standing: Optional[str] = ""
+    renewal: Optional[bool] = False
     shirt_size: Optional[str] = ""
     did_get_shirt: Optional[bool] = False
     time_availability: Optional[str] = ""
