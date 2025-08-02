@@ -1,5 +1,0 @@
-pre-commit==4.0.1
-semgrep==1.108.0
-virtualenv==20.29.2
-httpx
-pytest

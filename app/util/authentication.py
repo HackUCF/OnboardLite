@@ -1,5 +1,6 @@
 # SPDX-License-Identifier: MIT
 # Copyright (c) 2024 Collegiate Cyber Defense Club
+import logging
 import time
 from functools import wraps
 from typing import Optional
@@ -7,6 +8,7 @@ from typing import Optional
 from fastapi import Request, status
 from fastapi.responses import RedirectResponse
 from joserfc import errors, jwt
+from joserfc.jwk import OctKey
 
 from app.models.user import UserModel
 
@@ -16,6 +18,8 @@ from app.util.settings import Settings
 
 if Settings().telemetry.enable:
     from sentry_sdk import set_user
+
+logger = logging.getLogger(__name__)
 
 
 class Authentication:
@@ -33,9 +37,19 @@ class Authentication:
                 )
 
             try:
+                # Create proper key object for newer joserfc compatibility
+                try:
+                    secret_key = OctKey.import_key(Settings().jwt.secret.get_secret_value())
+                except Exception as key_error:
+                    logger.error(f"JWT key import error in admin decorator: {key_error}")
+                    return RedirectResponse(
+                        url=f"{Settings().http.domain}/api/oauth/?redir={request.url}",
+                        status_code=status.HTTP_302_FOUND,
+                    )
+
                 user_jwt = jwt.decode(
                     token,
-                    Settings().jwt.secret.get_secret_value(),
+                    secret_key,
                     algorithms=Settings().jwt.algorithm,
                 )
                 user_jwt = user_jwt.claims
@@ -67,7 +81,7 @@ class Authentication:
                         request,
                         403,
                         "Session not new enough to verify sudo status.",
-                        essay="Unlike normal log-in, non-bot sudoer sessions only last a day. This is to ensure the security of Hack@UCF member PII. " "Simply re-log into Onboard to continue.",
+                        essay="Unlike normal log-in, non-bot sudoer sessions only last a day. This is to ensure the security of Hack@UCF member PII. Simply re-log into Onboard to continue.",
                     )
 
             return await func(request, token, *args, **kwargs)
@@ -91,9 +105,19 @@ class Authentication:
                 )
 
             try:
+                # Create proper key object for newer joserfc compatibility
+                try:
+                    secret_key = OctKey.import_key(Settings().jwt.secret.get_secret_value())
+                except Exception as key_error:
+                    logger.error(f"JWT key import error in member decorator: {key_error}")
+                    return RedirectResponse(
+                        url=f"{Settings().http.domain}/api/oauth/?redir={request.url}",
+                        status_code=status.HTTP_302_FOUND,
+                    )
+
                 user_jwt = jwt.decode(
                     token,
-                    Settings().jwt.secret.get_secret_value(),
+                    secret_key,
                     algorithms=Settings().jwt.algorithm,
                 )
                 user_jwt = user_jwt.claims
@@ -134,9 +158,20 @@ class Authentication:
             "issued": time.time(),
             "infra_email": user.infra_email,
         }
-        bearer = jwt.encode(
-            {"alg": Settings().jwt.algorithm},
-            jwtData,
-            Settings().jwt.secret.get_secret_value(),
-        )
+        # Create proper key object for newer joserfc compatibility
+        try:
+            secret_key = OctKey.import_key(Settings().jwt.secret.get_secret_value())
+        except Exception as key_error:
+            print(f"JWT key import error during token creation: {key_error}")
+            raise ValueError(f"Failed to create JWT key: {key_error}")
+
+        try:
+            bearer = jwt.encode(
+                {"alg": Settings().jwt.algorithm},
+                jwtData,
+                secret_key,
+            )
+        except Exception as encode_error:
+            print(f"JWT encode error: {encode_error}")
+            raise ValueError(f"Failed to encode JWT: {encode_error}")
         return bearer

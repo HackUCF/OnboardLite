@@ -5,30 +5,25 @@ description = "Add your description here"
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
-    "airpress==1.0.3",
     "alembic==1.14.1",
-    "asyncio==3.4.3",
-    "commonmark==0.9.1",
-    "cryptography==38.0.0",
+    "commonmark",
     "fastapi[standard]==0.115.8",
-    "google-api-python-client==2.161.0",
-    "google-auth==2.37.0",
-    "jinja2==3.1.5",
-    "joserfc==1.0.1",
-    "passwordgenerator==1.5.1",
-    "pydantic==2.10.6",
-    "pydantic-settings==2.7.1",
-    "pyopenssl==22.1.0",
-    "python-dateutil==2.9.0.post0",
-    "python-keycloak==5.1.1",
-    "pyyaml==6.0.2",
-    "requests==2.32.3",
-    "requests-oauthlib==2.0.0",
-    "sentry-sdk==2.22.0",
+    "google-api-python-client",
+    "google-auth",
+    "jinja2",
+    "joserfc",
+    "passes-rs-py",
+    "pydantic",
+    "pydantic-settings",
+    "python-keycloak",
+    "pyyaml",
+    "requests",
+    "requests-oauthlib",
+    "sentry-sdk",
     "sqlmodel==0.0.22",
     "stripe==11.4.1",
-    "typing-extensions==4.12.2",
-    "uvicorn==0.34.0",
+    "typing-extensions",
+    "uvicorn",
 ]
 
 [dependency-groups]
@@ -39,3 +34,6 @@ dev = [
     "semgrep==1.108.0",
     "virtualenv==20.29.2",
 ]
+
+[tool.uv.sources]
+passes-rs-py = { git = "https://github.com/jontyms/neo-passes-rs" }

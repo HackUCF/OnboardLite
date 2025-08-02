@@ -6,12 +6,12 @@ import uuid
 from typing import Optional
 from urllib.parse import urlparse
 
-# FastAPI
 from fastapi import Cookie, Depends, FastAPI, Request, Response, status
 from fastapi.responses import FileResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from joserfc import jwt
+from joserfc.jwk import OctKey
 from requests_oauthlib import OAuth2Session
 from sqlalchemy.orm import selectinload
 from sqlmodel import Session, select
@@ -146,9 +146,13 @@ async def index(request: Request, token: Optional[str] = Cookie(None)):
 
     if token is not None:
         try:
+            # Create proper key object for newer joserfc compatibility
+            secret_key = OctKey.import_key(Settings().jwt.secret.get_secret_value())
+
+            # Decode the JWT token
             user_jwt = jwt.decode(
                 token,
-                Settings().jwt.secret.get_secret_value(),
+                secret_key,
                 algorithms=Settings().jwt.algorithm,
             )
             user_jwt = user_jwt.claims
@@ -156,9 +160,19 @@ async def index(request: Request, token: Optional[str] = Cookie(None)):
             is_admin: bool = user_jwt.get("sudo", False)
             user_id: bool = user_jwt.get("id", None)
             infra_email: bool = user_jwt.get("infra_email", None)
-        except Exception as e:
-            logger.exception(e)
-            pass
+        except Exception as key_error:
+            # JWT key import failed - this is a configuration error
+            if "Invalid key" in str(key_error):
+                logger.error(f"JWT configuration error - invalid secret key: {key_error}")
+                # This indicates a configuration problem that should be addressed
+                raise RuntimeError(f"JWT configuration error: {key_error}")
+            else:
+                # Token decode error - invalid/expired token, treat as unauthenticated
+                logger.debug(f"JWT token decode error: {key_error}")
+                is_full_member = False
+                is_admin = False
+                user_id = None
+                infra_email = None
 
     return templates.TemplateResponse(
         "index.html",

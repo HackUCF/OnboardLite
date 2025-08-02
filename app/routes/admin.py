@@ -9,6 +9,7 @@ from typing import Optional
 from fastapi import APIRouter, Body, Cookie, Depends, Request, Response
 from fastapi.templating import Jinja2Templates
 from joserfc import jwt
+from joserfc.jwk import OctKey
 from sqlalchemy.orm import selectinload
 from sqlmodel import Session, select
 
@@ -41,11 +42,22 @@ async def admin(request: Request, token: Optional[str] = Cookie(None)):
     """
     Renders the Admin home page.
     """
-    payload = jwt.decode(
-        token,
-        Settings().jwt.secret.get_secret_value(),
-        algorithms=Settings().jwt.algorithm,
-    )
+    # Create proper key object for newer joserfc compatibility
+    try:
+        secret_key = OctKey.import_key(Settings().jwt.secret.get_secret_value())
+    except Exception as key_error:
+        logger.error(f"JWT key import error in admin.py: {key_error}")
+        return templates.TemplateResponse("error.html", {"request": request, "error": "JWT configuration error"}, status_code=500)
+
+    try:
+        payload = jwt.decode(
+            token,
+            secret_key,
+            algorithms=Settings().jwt.algorithm,
+        )
+    except Exception as decode_error:
+        logger.error(f"JWT decode error in admin.py: {decode_error}")
+        return templates.TemplateResponse("error.html", {"request": request, "error": "Invalid token"}, status_code=401)
     payload = payload.claims
     return templates.TemplateResponse(
         "admin_searcher.html",
