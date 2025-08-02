@@ -218,6 +218,9 @@ function showUser(userId) {
     "\t",
   );
 
+  // Load membership history
+  loadMembershipHistory(userId);
+
   // Set buttons up
   document.getElementById("payDues").onclick = (evt) => {
     if (window.confirm("Are you sure you want to mark this user as paid?")) {
@@ -363,6 +366,60 @@ Password: ${resp.password}`);
 
       userDict[user_id].infra_email = resp.username;
       showUser(user_id);
+    });
+}
+
+function loadMembershipHistory(userId) {
+  const historyContainer = document.getElementById("membership_history");
+  historyContainer.innerHTML = "<p>Loading membership history...</p>";
+
+  fetch(`/admin/membership_history/?user_id=${userId}`)
+    .then((response) => response.json())
+    .then((data) => {
+      if (data.error) {
+        historyContainer.innerHTML = `<p>Error loading history: ${data.error}</p>`;
+        return;
+      }
+
+      const history = data.data;
+      if (history.length === 0) {
+        historyContainer.innerHTML =
+          "<p>No membership history found for this user.</p>";
+        return;
+      }
+
+      let historyHTML = "<table class='data_table'>";
+      historyHTML += "<thead><tr>";
+      historyHTML += "<th>Reset Date</th>";
+      historyHTML += "<th>Was Member</th>";
+      historyHTML += "<th>Paid Dues</th>";
+      historyHTML += "<th>Reason</th>";
+      historyHTML += "<th>Name at Reset</th>";
+      historyHTML += "<th>Email at Reset</th>";
+      historyHTML += "<th>Discord at Reset</th>";
+      historyHTML += "</tr></thead><tbody>";
+
+      history.forEach((record) => {
+        const resetDate = new Date(record.reset_date).toLocaleString();
+        const fullName = `${record.first_name_snapshot} ${record.surname_snapshot}`;
+
+        historyHTML += "<tr>";
+        historyHTML += `<td>${resetDate}</td>`;
+        historyHTML += `<td>${record.was_full_member ? "✔️" : "❌"}</td>`;
+        historyHTML += `<td>${record.had_paid_dues ? "✔️" : "❌"}</td>`;
+        historyHTML += `<td>${sanitizeHTML(record.reset_reason)}</td>`;
+        historyHTML += `<td>${sanitizeHTML(fullName)}</td>`;
+        historyHTML += `<td>${sanitizeHTML(record.email_snapshot || "N/A")}</td>`;
+        historyHTML += `<td>${sanitizeHTML(record.discord_username_snapshot || "N/A")}</td>`;
+        historyHTML += "</tr>";
+      });
+
+      historyHTML += "</tbody></table>";
+      historyContainer.innerHTML = historyHTML;
+    })
+    .catch((error) => {
+      console.error("Error loading membership history:", error);
+      historyContainer.innerHTML = "<p>Error loading membership history.</p>";
     });
 }
 
