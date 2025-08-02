@@ -108,8 +108,8 @@ This message is to confirm that your membership has processed successfully. You 
 These credentials can be used to the Hack@UCF Private Cloud, one of our many benefits of paying dues. This can be accessed at {Settings().infra.horizon} while on the CyberLab WiFi.
 
 ```yaml
-Username: {creds.get('username', 'Not Set')}
-Password: {creds.get('password', f"Not Set")}
+Username: {creds.get("username", "Not Set")}
+Password: {creds.get("password", f"Not Set")}
 ```
 
 The password for the `Cyberlab` WiFi is currently `{Settings().infra.wifi}`, but this is subject to change (and we'll let you know when that happens).
@@ -128,6 +128,7 @@ Happy Hacking,
                     logger.exception("Failed to send welcome message")
                 # Set member as a "full" member.
                 user_data.is_full_member = True
+                user_data.renewal = False
                 session.add(user_data)
                 session.commit()
                 session.refresh(user_data)
@@ -139,8 +140,8 @@ Happy Hacking,
 
 We wanted to let you know that you **did not** complete all of the steps for being able to become an Hack@UCF member.
 
-- Provided a name: {'✅' if user_data.first_name else '❌'}
-- Signed Ethics Form: {'✅' if user_data.ethics_form.signtime != 0 else '❌'}
+- Provided a name: {"✅" if user_data.first_name else "❌"}
+- Signed Ethics Form: {"✅" if user_data.ethics_form.signtime != 0 else "❌"}
 - Paid $10 dues: ✅
 
 Please complete all of these to become a full member. Once you do, visit https://{Settings().http.domain}/profile to re-run this check.

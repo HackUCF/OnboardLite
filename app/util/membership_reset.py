@@ -62,7 +62,8 @@ class MembershipReset:
                             email_snapshot=user.email or "",
                             discord_username_snapshot=user.discord.username if user.discord else "",
                         )
-
+                        user.is_returning = True
+                        user.renewal = True
                         session.add(history_record)
                         archived_count += 1
 
@@ -71,7 +72,7 @@ class MembershipReset:
                     user.did_pay_dues = False
                     user.can_vote = False
                     user.join_date = None
-                    user.is_returning = True
+
                     # Note: We don't reset personal info, Discord connections, etc.
 
                     reset_count += 1
