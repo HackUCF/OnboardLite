@@ -406,6 +406,40 @@ details > summary > * {
   width: 30vw;
 }
 
+/* Membership history table styles */
+#membership_history .data_table {
+  margin-top: 10px;
+  border-collapse: collapse;
+}
+
+#membership_history .data_table th,
+#membership_history .data_table td {
+  padding: 8px 12px;
+  border: 1px solid var(--hackucf-light-grey);
+  text-align: left;
+  font-size: 14px;
+}
+
+#membership_history .data_table th {
+  background-color: var(--hackucf-light-grey);
+  font-weight: bold;
+  color: var(--hackucf-gold);
+}
+
+#membership_history .data_table td:nth-child(1) {
+  width: auto;
+  min-width: auto;
+  font-weight: normal;
+}
+
+#membership_history .data_table tr:nth-child(even) {
+  background-color: rgba(67, 67, 67, 0.3);
+}
+
+#membership_history .data_table tr:hover {
+  background-color: rgba(210, 153, 11, 0.1);
+}
+
 @media screen and (max-width: 600px) {
   table.admin_main_table th:nth-child(3),
   table.admin_main_table td:nth-child(3),
