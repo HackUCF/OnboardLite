@@ -223,7 +223,7 @@ class Transformer:
 
             # For emails (specified domain)
             elif element_type == "email" and el.get("domain", False):
-                domain_regex = rf'^[A-Za-z0-9._%+-]+@{el.get("domain").lower()}$'
+                domain_regex = rf"^[A-Za-z0-9._%+-]+@{el.get('domain').lower()}$"
                 regex_constr = constr(pattern=domain_regex)
                 obj[el.get("key")] = (regex_constr, None)
 
