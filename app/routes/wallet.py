@@ -3,17 +3,18 @@
 import json
 import logging
 import os
+import tempfile
 import uuid
 from typing import Optional
 
 import requests
-from airpress import PKPass
 from fastapi import APIRouter, Cookie, Depends, Request, Response
 from fastapi.responses import RedirectResponse
 from google.auth import crypt, jwt
 from google.oauth2.service_account import Credentials
 from googleapiclient.discovery import build
 from googleapiclient.errors import HttpError
+from passes_rs_py import generate_pass
 from sqlalchemy.orm import selectinload
 from sqlmodel import select
 
@@ -214,81 +215,79 @@ def get_img(url):
 
 def apple_wallet(user_data):
     """
-    User data -> Apple Wallet blob
+    User data -> Apple Wallet blob using passes_rs_py
     """
-    # Create empty pass package
-    p = PKPass()
+    # Get certificate and key paths
+    key_path = str(Settings().apple_wallet.pki_dir / "hackucf.key")
+    cert_path = str(Settings().apple_wallet.pki_dir / "hackucf.pem")
 
-    is_ops = True if user_data.get("ops_email", False) else False
+    # Get asset paths
+    static_dir = os.path.join(os.path.dirname(__file__), "..", "static", "apple_wallet")
+    icon_path = os.path.join(static_dir, "icon.png")
+    icon2x_path = os.path.join(static_dir, "icon@2x.png")
+    logo_path = os.path.join(static_dir, "logo_reg.png")
+    logo2x_path = os.path.join(static_dir, "logo_reg@2x.png")
 
-    # Add locally stored assets
-    with open(
-        os.path.join(
-            os.path.dirname(__file__),
-            "..",
-            "static",
-            "apple_wallet",
-            "icon.png",
-        ),
-        "rb",
-    ) as file:
-        ico_data = file.read()
-        p.add_to_pass_package(("icon.png", ico_data))
+    # Check if required files exist
+    if not os.path.exists(key_path):
+        logger.error(f"File not found: {key_path}")
+        raise FileNotFoundError(f"File not found: {key_path}")
 
-    with open(
-        os.path.join(
-            os.path.dirname(__file__),
-            "..",
-            "static",
-            "apple_wallet",
-            "icon@2x.png",
-        ),
-        "rb",
-    ) as file:
-        ico_data = file.read()
-        p.add_to_pass_package(("icon@2x.png", ico_data))
+    if not os.path.exists(cert_path):
+        logger.error(f"File not found: {cert_path}")
+        raise FileNotFoundError(f"File not found: {cert_path}")
 
-    pass_json = {
+    if not os.path.exists(icon_path):
+        logger.error(f"File not found: {icon_path}")
+        raise FileNotFoundError(f"File not found: {icon2x_path}")
+
+    if not os.path.exists(icon2x_path):
+        logger.error(f"File not found: {icon2x_path}")
+        raise FileNotFoundError(f"File not found: {icon2x_path}")
+
+    if not os.path.exists(logo_path):
+        logger.error(f"File not found: {logo_path}")
+        raise FileNotFoundError(f"File not found: {logo_path}")
+
+    if not os.path.exists(logo2x_path):
+        logger.error(f"File not found: {logo2x_path}")
+        raise FileNotFoundError(f"File not found: {logo2x_path}")
+
+    # Create pass config as JSON string (required by passes_rs_py)
+    # This follows the Apple Wallet pass.json format specification
+
+    # Safely extract user data with proper null handling
+    user_id = str(user_data.get("id", ""))
+    first_name = user_data.get("first_name") or ""
+    surname = user_data.get("surname") or ""
+    full_name = f"{first_name} {surname}".strip() or "Member"
+
+    # Handle discord data safely
+    discord_data = user_data.get("discord") or {}
+    discord_username = ""
+    if isinstance(discord_data, dict):
+        discord_username = discord_data.get("username") or ""
+
+    # Handle ops email safely
+    ops_email = user_data.get("ops_email") or ""
+
+    config_dict = {
         "passTypeIdentifier": "pass.org.hackucf.join",
         "formatVersion": 1,
         "teamIdentifier": "VWTW9R97Q4",
         "organizationName": "Hack@UCF",
-        "serialNumber": str(uuid.uuid4()),
+        "serialNumber": user_id,
         "description": "Hack@UCF Membership ID",
-        "locations": [
-            {
-                "latitude": 28.601366109876327,
-                "longitude": -81.19867691612126,
-                "relevantText": "You're near the CyberLab!",
-            }
-        ],
+        "locations": [{"latitude": 28.601366109876327, "longitude": -81.19867691612126, "relevantText": "You're near the CyberLab!"}],
         "foregroundColor": "#D2990B",
         "backgroundColor": "#1C1C1C",
         "labelColor": "#ffffff",
         "logoText": "",
-        "barcodes": [
-            {
-                "format": "PKBarcodeFormatQR",
-                "message": str(user_data.get("id", "Unknown_ID")),
-                "messageEncoding": "iso-8859-1",
-                "altText": user_data.get("discord", {}).get("username", None),
-            }
-        ],
+        "barcodes": [{"format": "PKBarcodeFormatQR", "message": user_id, "messageEncoding": "iso-8859-1", "altText": discord_username}],
         "generic": {
-            "primaryFields": [
-                {
-                    "label": "Name",
-                    "key": "name",
-                    "value": user_data.get("first_name", "") + " " + user_data.get("surname", ""),
-                }
-            ],
-            "secondaryFields": [
-                {
-                    "label": "Infra Email",
-                    "key": "infra",
-                    "value": user_data.get("infra_email", "Not Provisioned"),
-                }
-            ],
+            "primaryFields": [{"label": "Name", "key": "name", "value": full_name}],
+            "secondaryFields": [{"label": "Infra Email", "key": "infra", "value": ops_email}],
+            "auxiliaryFields": [],
             "backFields": [
                 {
                     "label": "View Profile",
@@ -303,103 +302,49 @@ def apple_wallet(user_data):
                     "attributedValue": "At a meeting? Visit <a href='https://hackucf.org/signin'>hackucf.org/signin</a> to sign in.",
                 },
             ],
+            "headerFields": [],
         },
     }
 
-    # I am duplicating the file reads because it's easier than re-setting file pointers to the start of each file.
-    # I think.
+    # Validate that no values are None before JSON serialization
+    def validate_no_nulls(obj, path=""):
+        if isinstance(obj, dict):
+            for key, value in obj.items():
+                if value is None:
+                    logger.error(f"Found null value at {path}.{key}")
+                    raise ValueError(f"Null value found at {path}.{key}")
+                validate_no_nulls(value, f"{path}.{key}")
+        elif isinstance(obj, list):
+            for i, item in enumerate(obj):
+                validate_no_nulls(item, f"{path}[{i}]")
 
-    # User profile image
-    discord_img = user_data.get("discord", {}).get("avatar", False)
-    if discord_img:
-        img_data = get_img(discord_img)
-        p.add_to_pass_package(("thumbnail.png", img_data))
+    # Validate the config before serialization
+    validate_no_nulls(config_dict, "config")
 
-        img_data = get_img(discord_img)
-        p.add_to_pass_package(("thumbnail@2x.png", img_data))
+    config_json = json.dumps(config_dict)
+    logger.debug(f"Pass config JSON length: {len(config_json)} characters")
 
-    # Role-based logo.
-    if is_ops:
-        with open(
-            os.path.join(
-                os.path.dirname(__file__),
-                "..",
-                "static",
-                "apple_wallet",
-                "logo_ops@2x.png",
-            ),
-            "rb",
-        ) as file:
-            ico_data = file.read()
-            p.add_to_pass_package(("logo@2x.png", ico_data))
+    # Create temporary output file
+    with tempfile.NamedTemporaryFile(suffix=".pkpass", delete=False) as tmp_file:
+        output_path = tmp_file.name
 
-        with open(
-            os.path.join(
-                os.path.dirname(__file__),
-                "..",
-                "static",
-                "apple_wallet",
-                "logo_ops.png",
-            ),
-            "rb",
-        ) as file:
-            ico_data = file.read()
-            p.add_to_pass_package(("logo.png", ico_data))
-    else:
-        with open(
-            os.path.join(
-                os.path.dirname(__file__),
-                "..",
-                "static",
-                "apple_wallet",
-                "logo_reg@2x.png",
-            ),
-            "rb",
-        ) as file:
-            ico_data = file.read()
-            p.add_to_pass_package(("logo@2x.png", ico_data))
+    try:
+        # Generate the pass using JSON config string with all assets
+        generate_pass(config_json, cert_path, key_path, output_path, icon_path, icon2x_path, logo_path, logo2x_path)
 
-        with open(
-            os.path.join(
-                os.path.dirname(__file__),
-                "..",
-                "static",
-                "apple_wallet",
-                "logo_reg.png",
-            ),
-            "rb",
-        ) as file:
-            ico_data = file.read()
-            p.add_to_pass_package(("logo.png", ico_data))
+        # Read the generated pass file
+        with open(output_path, "rb") as f:
+            pass_data = f.read()
 
-    pass_data = json.dumps(pass_json).encode("utf8")
+        return pass_data
 
-    p.add_to_pass_package(("pass.json", pass_data))
-
-    # Add locally stored credentials
-    key_path = Settings().apple_wallet.pki_dir / "hackucf.key"
-    cert_path = Settings().apple_wallet.pki_dir / "hackucf.pem"
-
-    # Check if files exist before opening them
-    if not key_path.exists():
-        logger.error(f"File not found: {key_path}")
-        raise FileNotFoundError(f"File not found: {key_path}")
-
-    if not cert_path.exists():
-        logger.error(f"File not found: {cert_path}")
-        raise FileNotFoundError(f"File not found: {cert_path}")
-
-    # Open the files
-    with key_path.open("rb") as key, cert_path.open("rb") as cert:
-        # Add credentials to pass package
-        p.key = key.read()
-        p.cert = cert.read()
-        p.sign()
-
-    # As we've added credentials to pass package earlier we don't need to supply them to `.sign()`
-    # This is an alternative to calling .sign() method with credentials as arguments.
-
-    return p
+    except Exception as e:
+        logger.error(f"Failed to generate Apple Wallet pass for user {user_data.get('id', 'unknown')}: {e}")
+        raise e
+    finally:
+        # Clean up temporary file
+        if os.path.exists(output_path):
+            os.unlink(output_path)
 
 
 @router.get("/")
@@ -431,10 +376,10 @@ async def aapl_gen(
     statement = select(UserModel).where(UserModel.id == uuid.UUID(user_jwt["id"])).options(selectinload(UserModel.discord), selectinload(UserModel.ethics_form))
     user_data = user_to_dict(session.exec(statement).one_or_none())
 
-    p = apple_wallet(user_data)
+    pass_data = apple_wallet(user_data)
 
     return Response(
-        content=bytes(p),
+        content=pass_data,
         media_type="application/vnd.apple.pkpass",
         headers={"Content-Disposition": 'attachment; filename="hackucf.pkpass"'},
     )
