@@ -28,7 +28,7 @@ dependencies = [
     "sqlmodel==0.0.22",
     "stripe==11.4.1",
     "typing-extensions==4.12.2",
-    "uvicorn==0.34.0",
+    "uvicorn==0.35.0",
 ]
 
 [dependency-groups]
