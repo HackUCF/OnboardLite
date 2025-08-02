@@ -2,6 +2,7 @@
 # Copyright (c) 2024 Collegiate Cyber Defense Club
 import re
 import uuid
+from datetime import datetime, timezone
 from typing import Any, Optional
 
 from pydantic import BaseModel, validator
@@ -39,6 +40,27 @@ class EthicsFormModel(SQLModel, table=True):
     user: "UserModel" = Relationship(back_populates="ethics_form")
 
 
+class MembershipHistoryModel(SQLModel, table=True):
+    id: Optional[int] = Field(default=None, primary_key=True)
+    user_id: uuid.UUID = Field(foreign_key="usermodel.id")
+    reset_date: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+
+    # Historical membership data at time of reset
+    was_full_member: Optional[bool] = False
+    had_paid_dues: Optional[bool] = False
+    original_join_date: Optional[int] = None
+    could_vote: Optional[bool] = False
+    reset_reason: Optional[str] = "Annual membership reset"
+
+    # Snapshot of key member info at reset time
+    first_name_snapshot: Optional[str] = ""
+    surname_snapshot: Optional[str] = ""
+    email_snapshot: Optional[str] = ""
+    discord_username_snapshot: Optional[str] = ""
+
+    user: "UserModel" = Relationship(back_populates="membership_history")
+
+
 class UserModel(SQLModel, table=True):
     id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
     discord_id: str = Field(unique=True)
@@ -73,6 +95,7 @@ class UserModel(SQLModel, table=True):
 
     discord: DiscordModel = Relationship(back_populates="user")
     ethics_form: EthicsFormModel = Relationship(back_populates="user")
+    membership_history: list[MembershipHistoryModel] = Relationship(back_populates="user")
     # cyberlab_monitor: CyberLabModel = Relationship(back_populates="user")
     # mentee: MenteeModel = Relationship(back_populates="user")
 

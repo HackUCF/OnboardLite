@@ -5,7 +5,7 @@ from sqlalchemy import engine_from_config, pool
 from sqlalchemy.engine import Connection
 from sqlmodel import SQLModel  # noqa: F401
 
-from app.models.user import DiscordModel, EthicsFormModel, UserModel  # noqa: F401
+from app.models.user import DiscordModel, EthicsFormModel, MembershipHistoryModel, UserModel  # noqa: F401
 from app.util.settings import Settings
 
 # this is the Alembic Config object, which provides

@@ -13,6 +13,7 @@ from sqlalchemy.orm import selectinload
 from sqlmodel import Session, select
 
 from app.models.user import (
+    MembershipHistoryModel,
     UserModel,
     UserModelMutable,
     user_to_dict,
@@ -24,13 +25,14 @@ from app.util.database import get_session
 from app.util.discord import Discord
 from app.util.email import Email
 from app.util.errors import Errors
+from app.util.membership_reset import MembershipReset
 from app.util.settings import Settings
 
 logger = logging.getLogger(__name__)
 
 templates = Jinja2Templates(directory="app/templates")
 
-router = APIRouter(prefix="/admin", tags=["Admin"], responses=Errors.basic_http())
+router = APIRouter(prefix="/admin", tags=["Admin"], redirect_slashes=False, responses=Errors.basic_http())
 
 
 @router.get("/")
@@ -90,8 +92,8 @@ We are happy to grant you Hack@UCF Private Cloud access!
 These credentials can be used to the Hack@UCF Private Cloud. This can be accessed at {Settings().infra.horizon} while on the CyberLab WiFi.
 
 ```
-Username: {creds.get('username', 'Not Set')}
-Password: {creds.get('password', f"Please visit https://{Settings().http.domain}/profile and under Danger Zone, reset your Infra creds.")}
+Username: {creds.get("username", "Not Set")}
+Password: {creds.get("password", f"Please visit https://{Settings().http.domain}/profile and under Danger Zone, reset your Infra creds.")}
 ```
 
 By using the Hack@UCF Infrastructure, you agree to the following Acceptable Use Policy located at https://help.hackucf.org/misc/aup
@@ -337,3 +339,106 @@ async def admin_list_csv(
     output.close()
 
     return Response(content=csv_content, headers={"Content-Type": "text/csv"})
+
+
+@router.post("/reset_memberships/")
+@Authentication.admin
+async def reset_all_memberships(
+    request: Request,
+    token: Optional[str] = Cookie(None),
+    session: Session = Depends(get_session),
+):
+    """
+    API endpoint to reset all memberships and archive historical data.
+    """
+    # Parse request body
+    body = await request.json()
+    reset_reason = body.get("reset_reason", "Annual membership reset")
+
+    # Get admin user info from JWT for logging
+    payload = jwt.decode(
+        token,
+        Settings().jwt.secret.get_secret_value(),
+        algorithms=Settings().jwt.algorithm,
+    )
+    admin_user_id = uuid.UUID(payload.claims.get("id"))
+
+    result = MembershipReset.reset_all_memberships(
+        session=session,
+        reset_reason=reset_reason,
+        admin_user_id=admin_user_id,
+    )
+
+    return result
+
+
+@router.get("/membership_history/")
+@Authentication.admin
+async def get_membership_history(
+    request: Request,
+    token: Optional[str] = Cookie(None),
+    user_id: Optional[uuid.UUID] = None,
+    limit: int = 100,
+    session: Session = Depends(get_session),
+):
+    """
+    API endpoint to get membership history records.
+    """
+    history = MembershipReset.get_membership_history(
+        session=session,
+        user_id=user_id,
+        limit=limit,
+    )
+
+    return {"data": history}
+
+
+@router.get("/reset_summary/")
+@Authentication.admin
+async def get_reset_summary(
+    request: Request,
+    token: Optional[str] = Cookie(None),
+    session: Session = Depends(get_session),
+):
+    """
+    API endpoint to get summary statistics about membership resets.
+    """
+    summary = MembershipReset.get_reset_summary(session=session)
+
+    return {"data": summary}
+
+
+@router.post("/restore_membership/")
+@Authentication.admin
+async def restore_membership(
+    request: Request,
+    token: Optional[str] = Cookie(None),
+    session: Session = Depends(get_session),
+):
+    """
+    API endpoint to restore a user's membership from historical data.
+    """
+    # Parse request body
+    body = await request.json()
+    user_id = body.get("user_id")
+    history_record_id = body.get("history_record_id")
+
+    if not user_id or not history_record_id:
+        return {"success": False, "error": "Missing user_id or history_record_id"}
+
+    # Get admin user info from JWT for logging
+    payload = jwt.decode(
+        token,
+        Settings().jwt.secret.get_secret_value(),
+        algorithms=Settings().jwt.algorithm,
+    )
+    admin_user_id = uuid.UUID(payload.claims.get("id"))
+
+    result = MembershipReset.restore_membership_from_history(
+        session=session,
+        user_id=uuid.UUID(user_id),
+        history_record_id=history_record_id,
+        admin_user_id=admin_user_id,
+    )
+
+    return result
