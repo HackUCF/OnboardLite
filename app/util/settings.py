@@ -9,6 +9,7 @@ import subprocess
 from typing import Optional
 
 import yaml
+from joserfc.jwk import OctKey
 from pydantic import BaseModel, Field, SecretStr, constr, model_validator
 from pydantic_settings import BaseSettings
 
@@ -269,12 +270,22 @@ class JwtConfig(BaseModel):
         algorithm (str): The algorithm used for JWT encryption.
         lifetime_user (int): The lifetime (in seconds) of a user JWT.
         lifetime_sudo (int): The lifetime (in seconds) of a sudo JWT.
+        key_object: The JWT key object created from the secret.
     """
 
     secret: SecretStr = constr(min_length=32)
     algorithm: Optional[str] = Field("HS256")
     lifetime_user: Optional[int] = Field(9072000)
     lifetime_sudo: Optional[int] = Field(86400)
+    key_object: Optional[object] = Field(default=None, exclude=True)
+
+    def __init__(self, **data):
+        super().__init__(**data)
+        # Create JWT key object during initialization
+        try:
+            self.key_object = OctKey.import_key(self.secret.get_secret_value())
+        except Exception as e:
+            raise ValueError(f"Invalid JWT secret key: {e}") from e
 
 
 if settings.get("jwt"):
