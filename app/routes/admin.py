@@ -363,7 +363,7 @@ async def reset_all_memberships(
     # Get admin user info from JWT for logging
     payload = jwt.decode(
         token,
-        Settings().jwt.secret.get_secret_value(),
+        Settings().jwt.key_object,
         algorithms=Settings().jwt.algorithm,
     )
     admin_user_id = uuid.UUID(payload.claims.get("id"))
@@ -434,7 +434,7 @@ async def restore_membership(
     # Get admin user info from JWT for logging
     payload = jwt.decode(
         token,
-        Settings().jwt.secret.get_secret_value(),
+        Settings().jwt.key_object,
         algorithms=Settings().jwt.algorithm,
     )
     admin_user_id = uuid.UUID(payload.claims.get("id"))
