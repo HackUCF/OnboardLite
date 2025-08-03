@@ -64,6 +64,7 @@ class MembershipReset:
                         )
                         user.is_returning = True
                         user.renewal = True
+                        user.did_get_shirt = False
                         session.add(history_record)
                         archived_count += 1
 
