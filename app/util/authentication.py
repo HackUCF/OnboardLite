@@ -8,7 +8,6 @@ from typing import Optional
 from fastapi import Request, status
 from fastapi.responses import RedirectResponse
 from joserfc import errors, jwt
-from joserfc.jwk import OctKey
 
 from app.models.user import UserModel
 
@@ -37,19 +36,10 @@ class Authentication:
                 )
 
             try:
-                # Create proper key object for newer joserfc compatibility
-                try:
-                    secret_key = OctKey.import_key(Settings().jwt.secret.get_secret_value())
-                except Exception as key_error:
-                    logger.error(f"JWT key import error in admin decorator: {key_error}")
-                    return RedirectResponse(
-                        url=f"{Settings().http.domain}/api/oauth/?redir={request.url}",
-                        status_code=status.HTTP_302_FOUND,
-                    )
-
+                # Use pre-created JWT key object from settings
                 user_jwt = jwt.decode(
                     token,
-                    secret_key,
+                    Settings().jwt.key_object,
                     algorithms=Settings().jwt.algorithm,
                 )
                 user_jwt = user_jwt.claims
@@ -105,19 +95,10 @@ class Authentication:
                 )
 
             try:
-                # Create proper key object for newer joserfc compatibility
-                try:
-                    secret_key = OctKey.import_key(Settings().jwt.secret.get_secret_value())
-                except Exception as key_error:
-                    logger.error(f"JWT key import error in member decorator: {key_error}")
-                    return RedirectResponse(
-                        url=f"{Settings().http.domain}/api/oauth/?redir={request.url}",
-                        status_code=status.HTTP_302_FOUND,
-                    )
-
+                # Use pre-created JWT key object from settings
                 user_jwt = jwt.decode(
                     token,
-                    secret_key,
+                    Settings().jwt.key_object,
                     algorithms=Settings().jwt.algorithm,
                 )
                 user_jwt = user_jwt.claims
@@ -158,20 +139,14 @@ class Authentication:
             "issued": time.time(),
             "infra_email": user.infra_email,
         }
-        # Create proper key object for newer joserfc compatibility
-        try:
-            secret_key = OctKey.import_key(Settings().jwt.secret.get_secret_value())
-        except Exception as key_error:
-            print(f"JWT key import error during token creation: {key_error}")
-            raise ValueError(f"Failed to create JWT key: {key_error}")
-
+        # Use pre-created JWT key object from settings
         try:
             bearer = jwt.encode(
                 {"alg": Settings().jwt.algorithm},
                 jwtData,
-                secret_key,
+                Settings().jwt.key_object,
             )
         except Exception as encode_error:
-            print(f"JWT encode error: {encode_error}")
+            logger.error(f"JWT encode error: {encode_error}")
             raise ValueError(f"Failed to encode JWT: {encode_error}")
         return bearer
