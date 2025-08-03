@@ -1,5 +1,5 @@
-# Use the official Python base image
-FROM ghcr.io/astral-sh/uv:python3.13-bookworm-slim AS base
+
+FROM ghcr.io/astral-sh/uv:python3.13-bookworm AS base
 
 # Set the working directory in the container
 WORKDIR /src
