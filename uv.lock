@@ -830,7 +830,7 @@ requires-dist = [
     { name = "requests-oauthlib" },
     { name = "sentry-sdk" },
     { name = "sqlmodel", specifier = "==0.0.24" },
-    { name = "stripe", specifier = "==11.4.1" },
+    { name = "stripe", specifier = "==11.6.0" },
     { name = "typing-extensions" },
     { name = "uvicorn" },
 ]
@@ -1565,15 +1565,15 @@ wheels = [
 
 [[package]]
 name = "stripe"
-version = "11.4.1"
+version = "11.6.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "requests" },
     { name = "typing-extensions" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/42/84/b72eeda51c6033e6a88c71de74de56e3a529a60728159e200b42220b21a9/stripe-11.4.1.tar.gz", hash = "sha256:7ddd251b622d490fe57d78487855dc9f4d95b1bb113607e81fd377037a133d5a", size = 1379118, upload-time = "2024-12-19T23:24:11.493Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/30/a4/7e16668d7adfb45229f4b67c04c79f53fe78335a6d0625303b32024d831c/stripe-11.6.0.tar.gz", hash = "sha256:0ced7cce23a6cb1a393c86a1f7f9435c9d83ae7cbd556362868caf62cb44a92c", size = 1390405, upload-time = "2025-02-24T22:39:46.962Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/70/a0/e416502214c2da3f78015956127e6e44ef789cfcfa7a78f6e564fc05d2c6/stripe-11.4.1-py2.py3-none-any.whl", hash = "sha256:8aa47a241de0355c383c916c4ef7273ab666f096a44ee7081e357db4a36f0cce", size = 1627969, upload-time = "2024-12-19T23:24:09.251Z" },
+    { url = "https://files.pythonhosted.org/packages/d8/67/e320a11da2049dfd50fd1726952093b173332563f32d1a94cc3758932147/stripe-11.6.0-py2.py3-none-any.whl", hash = "sha256:6e6cf09ebb6d5fc2d708401cb8868fd7bff987a6d09a0433caaa92c62f97dbc5", size = 1636766, upload-time = "2025-02-24T22:39:44.629Z" },
 ]
 
 [[package]]
