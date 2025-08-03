@@ -28,11 +28,11 @@ dependencies = [
 
 [dependency-groups]
 dev = [
-    "httpx>=0.28.1",
-    "pre-commit==4.0.1",
+    "httpx",
+    "pre-commit",
     "pytest>=8.3.5",
-    "semgrep==1.108.0",
-    "virtualenv==20.29.2",
+    "semgrep",
+    "virtualenv",
 ]
 
 [tool.uv.sources]
