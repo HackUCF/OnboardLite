@@ -1,6 +1,6 @@
 """Add membership history table
 
-Revision ID: abc123
+Revision ID: 5f89a1b2c3d4
 Revises: 4875f19211ae
 Create Date: 2025-07-30 01:54:50.068823
 
