@@ -279,14 +279,14 @@ def apple_wallet(user_data):
         "serialNumber": user_id,
         "description": "Hack@UCF Membership ID",
         "locations": [{"latitude": 28.601366109876327, "longitude": -81.19867691612126, "relevantText": "You're near the CyberLab!"}],
-        "foregroundColor": "#D2990B",
-        "backgroundColor": "#1C1C1C",
-        "labelColor": "#ffffff",
+        "foregroundColor": "rgb(210, 153, 11)",
+        "backgroundColor": "rgb(28, 28, 28)",
+        "labelColor": "rgb(255, 255, 255)",
         "logoText": "",
         "barcodes": [{"format": "PKBarcodeFormatQR", "message": user_id, "messageEncoding": "iso-8859-1", "altText": discord_username}],
         "generic": {
             "primaryFields": [{"label": "Name", "key": "name", "value": full_name}],
-            "secondaryFields": [{"label": "Infra Email", "key": "infra", "value": ops_email}],
+            "secondaryFields": [],
             "auxiliaryFields": [],
             "backFields": [
                 {
