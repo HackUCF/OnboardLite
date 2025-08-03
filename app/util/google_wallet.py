@@ -234,7 +234,7 @@ class GoogleWalletManager:
         object_id = f"{self.issuer_id}.{user_id}"
 
         try:
-            response = self.client.loyaltyobject().get(resourceId=object_id).execute()
+            response = self.client.genericobject().get(resourceId=object_id).execute()
             return response
         except HttpError as e:
             if e.status_code == 404:
