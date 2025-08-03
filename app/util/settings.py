@@ -273,11 +273,13 @@ class JwtConfig(BaseModel):
         key_object: The JWT key object created from the secret.
     """
 
+    model_config = {"arbitrary_types_allowed": True}
+
     secret: SecretStr = constr(min_length=32)
     algorithm: Optional[str] = Field("HS256")
     lifetime_user: Optional[int] = Field(9072000)
     lifetime_sudo: Optional[int] = Field(86400)
-    key_object: Optional[object] = Field(default=None, exclude=True)
+    key_object: Optional[OctKey] = Field(default=None, exclude=True)
 
     def __init__(self, **data):
         super().__init__(**data)
