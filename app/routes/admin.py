@@ -26,6 +26,7 @@ from app.util.discord import Discord
 from app.util.email import Email
 from app.util.errors import Errors
 from app.util.membership_reset import MembershipReset
+from app.util.messages import load_and_render_template
 from app.util.settings import Settings
 
 logger = logging.getLogger(__name__)
@@ -75,12 +76,13 @@ async def get_infra(
     API endpoint to FORCE-provision Infra credentials (even without membership!!!)
     """
 
-    if member_id == None:
+    if member_id is None:
         return {"username": "", "password": "", "error": "Missing ?member_id"}
 
     user_data = session.exec(select(UserModel).where(UserModel.id == member_id)).one_or_none()
 
     creds = Approve.provision_infra(member_id, user_data)
+
     if creds is None:
         creds = {}
 
@@ -90,27 +92,11 @@ async def get_infra(
     # Get user data
 
     # Send DM...
-    new_creds_msg = f"""Hello {user_data.first_name},
-
-We are happy to grant you Hack@UCF Private Cloud access!
-
-These credentials can be used to the Hack@UCF Private Cloud. This can be accessed at {Settings().infra.horizon} while on the CyberLab WiFi.
-
-```
-Username: {creds.get("username", "Not Set")}
-Password: {creds.get("password", f"Please visit https://{Settings().http.domain}/profile and under Danger Zone, reset your Infra creds.")}
-```
-
-By using the Hack@UCF Infrastructure, you agree to the following Acceptable Use Policy located at https://help.hackucf.org/misc/aup
-
-The password for the `Cyberlab` WiFi is currently `{Settings().infra.wifi}`, but this is subject to change (and we'll let you know when that happens).
-
-Happy Hacking,
-  - Hack@UCF Bot
-            """
+    new_creds_msg = load_and_render_template("app/messages/manual_invite_creds.md", user_data=user_data, creds=creds, settings=Settings())
+    logger.debug(f"Rendered message: {new_creds_msg}")
 
     # Send Discord message
-    # Discord.send_message(user_data.get("discord_id"), new_creds_msg)
+    Discord.send_message(user_data.get("discord_id"), new_creds_msg)
     Email.send_email("Hack@UCF Private Cloud Credentials", new_creds_msg, user_data.email)
     return {
         "username": creds.get("username"),
@@ -129,7 +115,7 @@ async def get_refresh(
     """
     API endpoint that re-runs the member verification workflow
     """
-    if member_id == None:
+    if member_id is None:
         return {"data": {}, "error": "Missing ?member_id"}
 
     Approve.approve_member(member_id)
@@ -153,7 +139,7 @@ async def admin_get_single(
     """
     API endpoint that gets a specific user's data as JSON
     """
-    if member_id == None:
+    if member_id is None:
         return {"data": {}, "error": "Missing ?member_id"}
 
     statement = select(UserModel).where(UserModel.id == member_id).options(selectinload(UserModel.discord), selectinload(UserModel.ethics_form))

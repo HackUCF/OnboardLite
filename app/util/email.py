@@ -1,5 +1,6 @@
 # SPDX-License-Identifier: MIT
 # Copyright (c) 2024 Collegiate Cyber Defense Club
+import logging
 import smtplib
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
@@ -7,6 +8,8 @@ from email.mime.text import MIMEText
 import commonmark
 
 from app.util.settings import Settings
+
+logger = logging.getLogger()
 
 if Settings().email.enable:
     email = Settings().email.email
@@ -35,6 +38,9 @@ class Email:
         part2 = MIMEText(html, "html")
         msg.attach(part1)
         msg.attach(part2)
-        with smtplib.SMTP_SSL(smtp_host, 465) as smtp_server:
-            smtp_server.login(email, password)
+        try:
+            with smtplib.SMTP_SSL(smtp_host, 465) as smtp_server:
+                smtp_server.login(email, password)
             smtp_server.sendmail(email, recipient, msg.as_string())
+        except Exception as e:
+            logging.error(f"Error sending email: {e}")
