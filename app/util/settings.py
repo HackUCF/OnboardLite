@@ -6,7 +6,7 @@ import os
 import pathlib
 import re
 import subprocess
-from typing import Optional
+from typing import List, Optional
 
 import yaml
 from joserfc.jwk import OctKey
@@ -385,6 +385,29 @@ else:
     logger.warn("Missing http config")
 
 
+class ApiKeyConfig(BaseModel):
+    """
+    Represents an API key configuration.
+
+    Attributes:
+        key (str): The API key string
+        name (str): Human-readable name for the key
+        description (str): Optional description of the key's purpose
+        created (str): Optional creation timestamp
+    """
+
+    key: str
+    name: str
+    description: Optional[str] = ""
+    created: Optional[str] = None
+
+
+if settings.get("api_keys"):
+    api_keys_config = [ApiKeyConfig(**key_config) for key_config in settings["api_keys"]]
+else:
+    api_keys_config = []
+
+
 class SingletonBaseSettingsMeta(type(BaseSettings), type):
     _instances = {}
 
@@ -406,5 +429,6 @@ class Settings(BaseSettings, metaclass=SingletonBaseSettingsMeta):
     google_wallet: GoogleWalletConfig = google_wallet_config
     telemetry: Optional[TelemetryConfig] = telemetry_config
     apple_wallet: AppleWalletConfig = apple_wallet_config
+    api_keys: List[ApiKeyConfig] = api_keys_config
     env: Optional[str] = onboard_env
     loglevel: Optional[str] = loglevel

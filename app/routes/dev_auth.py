@@ -11,7 +11,7 @@ from app.models.user import (
     DiscordModel,
     UserModel,
 )
-from app.util.authentication import Authentication
+from app.util.auth_dependencies import Authentication
 from app.util.database import get_session
 from app.util.errors import Errors
 from app.util.settings import Settings

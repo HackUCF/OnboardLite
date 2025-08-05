@@ -34,7 +34,7 @@ if os.getenv("ENV") == "development":
 from app.util.approve import Approve
 
 # Import middleware
-from app.util.authentication import Authentication
+from app.util.auth_dependencies import Authentication, CurrentMember
 from app.util.database import get_session, init_db
 from app.util.discord import Discord
 
@@ -345,18 +345,16 @@ Renders a basic "my membership" page
 
 
 @app.get("/profile/")
-@Authentication.member
 async def profile(
     request: Request,
-    token: Optional[str] = Cookie(None),
-    user_jwt: Optional[object] = {},
+    current_user: CurrentMember,
     session: Session = Depends(get_session),
 ):
-    statement = select(UserModel).where(UserModel.id == uuid.UUID(user_jwt["id"])).options(selectinload(UserModel.discord), selectinload(UserModel.ethics_form))
+    statement = select(UserModel).where(UserModel.id == uuid.UUID(current_user["id"])).options(selectinload(UserModel.discord), selectinload(UserModel.ethics_form))
     user_data = user_to_dict(session.exec(statement).one_or_none())
 
     # Re-run approval workflow.
-    Approve.approve_member(uuid.UUID(user_jwt.get("id")))
+    Approve.approve_member(uuid.UUID(current_user.get("id")))
 
     return templates.TemplateResponse("profile.html", {"request": request, "user_data": user_data})
 
@@ -367,12 +365,10 @@ Renders a Kennelish form page, complete with stylings and UI controls.
 
 
 @app.get("/join/{num}/")
-@Authentication.member
 async def forms(
     request: Request,
-    token: Optional[str] = Cookie(None),
-    user_jwt: Optional[object] = {},
-    num: str = 1,
+    current_user: CurrentMember,
+    num: str,
     session: Session = Depends(get_session),
 ):
     if num == "1":
@@ -389,7 +385,7 @@ async def forms(
 
     # Get data from SqlModel
 
-    statement = select(UserModel).where(UserModel.id == uuid.UUID(user_jwt.get("id"))).options(selectinload(UserModel.discord))
+    statement = select(UserModel).where(UserModel.id == uuid.UUID(current_user.get("id"))).options(selectinload(UserModel.discord))
     user_data = session.exec(statement).one_or_none()
     # Have Kennelish parse the data.
     user_data = user_to_dict(user_data)
@@ -400,9 +396,9 @@ async def forms(
         "form.html",
         {
             "request": request,
-            "icon": user_jwt["pfp"],
+            "icon": current_user["pfp"],
             "user_data": user_data,
-            "id": user_jwt["id"],
+            "id": current_user["id"],
             "body": body,
         },
     )

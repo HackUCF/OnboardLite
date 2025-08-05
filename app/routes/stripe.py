@@ -2,10 +2,9 @@
 # Copyright (c) 2024 Collegiate Cyber Defense Club
 import logging
 import uuid
-from typing import Optional
 
 import stripe
-from fastapi import APIRouter, Cookie, Depends, HTTPException, Request
+from fastapi import APIRouter, Depends, HTTPException, Request, status
 from fastapi.responses import RedirectResponse
 from fastapi.templating import Jinja2Templates
 from sqlalchemy.orm import selectinload
@@ -13,9 +12,8 @@ from sqlmodel import Session, select
 
 from app.models.user import UserModel, user_to_dict
 from app.util.approve import Approve
-from app.util.authentication import Authentication
+from app.util.auth_dependencies import CurrentMember
 from app.util.database import get_session
-from app.util.errors import Errors
 from app.util.settings import Settings
 
 templates = Jinja2Templates(directory="app/templates")
@@ -23,7 +21,7 @@ templates = Jinja2Templates(directory="app/templates")
 
 logger = logging.getLogger(__name__)
 
-router = APIRouter(prefix="/pay", tags=["API"], responses=Errors.basic_http())
+router = APIRouter(prefix="/pay", tags=["API"])
 
 if not Settings().stripe.pause_payments:
     # Set Stripe API key.
@@ -31,17 +29,15 @@ if not Settings().stripe.pause_payments:
 
 
 @router.get("/")
-@Authentication.member
 async def get_root(
     request: Request,
-    token: Optional[str] = Cookie(None),
-    user_jwt: Optional[object] = {},
+    current_user: CurrentMember,
     session: Session = Depends(get_session),
 ):
     """
     Get API information.
     """
-    statement = select(UserModel).where(UserModel.id == uuid.UUID(user_jwt["id"])).options(selectinload(UserModel.discord))
+    statement = select(UserModel).where(UserModel.id == uuid.UUID(current_user["id"])).options(selectinload(UserModel.discord))
     user_data = session.exec(statement).one_or_none()
     did_pay_dues = user_data.did_pay_dues
 
@@ -61,19 +57,17 @@ async def get_root(
 
 
 @router.api_route("/checkout", methods=["GET", "POST"])
-@Authentication.member
 async def create_checkout_session(
     request: Request,
-    token: Optional[str] = Cookie(None),
-    user_jwt: Optional[object] = {},
+    current_user: CurrentMember,
     session: Session = Depends(get_session),
 ):
     if Settings().stripe.pause_payments:
-        return Errors.generate(request, 503, "Payments Paused")
+        raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail="Payments are currently paused")
 
-    user_data = session.exec(select(UserModel).where(UserModel.id == uuid.UUID(user_jwt.get("id")))).one_or_none()
+    user_data = session.exec(select(UserModel).where(UserModel.id == uuid.UUID(current_user.get("id")))).one_or_none()
     if not user_data.email:
-        return Errors.generate(request, 400, "No email associated with account")
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="No email associated with account")
     user_id = user_data.id
     try:
         stripe_email = user_data.email
@@ -93,7 +87,7 @@ async def create_checkout_session(
         )
     except Exception as e:
         logger.exception("Error creating checkout session in stripe.py", e)
-        return HTTPException(status_code=500, detail="Error creating checkout session.")
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Error creating checkout session")
 
     return RedirectResponse(checkout_session.url, status_code=303)
 
@@ -110,11 +104,11 @@ async def webhook(request: Request, session: Session = Depends(get_session)):
     except ValueError as e:
         # Invalid payload
         logger.error("Malformed Stripe Payload", e)
-        return HTTPException(status_code=400, detail="Malformed payload.")
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Malformed payload")
     except stripe.error.SignatureVerificationError as e:
         # Invalid signature
         logger.error("Malformed Stripe Payload", e)
-        return HTTPException(status_code=400, detail="Malformed payload.")
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Malformed payload")
 
     # Event Handling
     if event["type"] == "checkout.session.completed":
@@ -130,7 +124,7 @@ async def webhook(request: Request, session: Session = Depends(get_session)):
         pay_dues(checkout_session, session)
 
     # Passed signature verification
-    return HTTPException(status_code=200, detail="Success.")
+    return {"status": "success"}
 
 
 def pay_dues(checkout_session, db_session):
