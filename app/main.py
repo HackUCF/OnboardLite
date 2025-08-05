@@ -7,6 +7,7 @@ from typing import Optional
 from urllib.parse import urlparse
 
 from fastapi import Cookie, Depends, FastAPI, Request, Response, status
+from fastapi.openapi.utils import get_openapi
 from fastapi.responses import FileResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
@@ -73,6 +74,57 @@ logger = logging.getLogger(__name__)
 # Initiate FastAPI.
 app = FastAPI()
 templates = Jinja2Templates(directory="app/templates")
+
+
+def custom_openapi():
+    if app.openapi_schema:
+        return app.openapi_schema
+
+    openapi_schema = get_openapi(
+        title="OnboardLite API",
+        version="1.0.0",
+        description="Hack@UCF's in-house membership management suite",
+        routes=app.routes,
+    )
+
+    # Fix parameter type issues
+    for path, path_item in openapi_schema.get("paths", {}).items():
+        for method, operation in path_item.items():
+            if method in ["get", "post", "put", "delete", "patch"]:
+                # Fix operation IDs to ensure uniqueness
+                if "operationId" in operation:
+                    operation_id = operation["operationId"]
+                    if operation_id.endswith("_post") and method == "get":
+                        operation["operationId"] = operation_id.replace("_post", "_get")
+
+                # Fix parameter schemas
+                if "parameters" in operation:
+                    for param in operation["parameters"]:
+                        if "schema" in param:
+                            schema = param["schema"]
+                            # Fix anyOf nullable patterns
+                            if "anyOf" in schema:
+                                any_of = schema["anyOf"]
+                                if len(any_of) == 2:
+                                    string_type = None
+                                    null_type = None
+                                    for item in any_of:
+                                        if item.get("type") == "string":
+                                            string_type = item
+                                        elif item.get("type") == "null":
+                                            null_type = item
+
+                                    if string_type and null_type:
+                                        # Convert to nullable string
+                                        param["schema"] = {"type": "string", "nullable": True, "title": schema.get("title", "")}
+                                        if not param.get("required", True):
+                                            param["required"] = False
+
+    app.openapi_schema = openapi_schema
+    return app.openapi_schema
+
+
+app.openapi = custom_openapi
 
 
 def global_context(request: Request):

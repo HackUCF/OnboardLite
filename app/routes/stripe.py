@@ -56,12 +56,50 @@ async def get_root(
     )
 
 
-@router.api_route("/checkout", methods=["GET", "POST"])
+@router.get("/checkout")
+async def get_checkout_session(
+    request: Request,
+    current_user: CurrentMember,
+    session: Session = Depends(get_session),
+):
+    """Get checkout session information or redirect to existing session."""
+    if Settings().stripe.pause_payments:
+        raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail="Payments are currently paused")
+
+    user_data = session.exec(select(UserModel).where(UserModel.id == uuid.UUID(current_user.get("id")))).one_or_none()
+    if not user_data.email:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="No email associated with account")
+    user_id = user_data.id
+    try:
+        stripe_email = user_data.email
+        checkout_session = stripe.checkout.Session.create(
+            line_items=[
+                {
+                    # Provide the exact Price ID (for example, pr_1234) of the product you want to sell
+                    "price": Settings().stripe.price_id,
+                    "quantity": 1,
+                },
+            ],
+            customer_email=stripe_email,
+            mode="payment",
+            success_url=Settings().stripe.url_success,
+            cancel_url=Settings().stripe.url_failure,
+            metadata={"user_id": str(user_id)},
+        )
+    except Exception as e:
+        logger.exception("Error creating checkout session in stripe.py", e)
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Error creating checkout session")
+
+    return RedirectResponse(checkout_session.url, status_code=303)
+
+
+@router.post("/checkout")
 async def create_checkout_session(
     request: Request,
     current_user: CurrentMember,
     session: Session = Depends(get_session),
 ):
+    """Create a new Stripe checkout session."""
     if Settings().stripe.pause_payments:
         raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail="Payments are currently paused")
 
