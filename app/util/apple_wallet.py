@@ -4,7 +4,6 @@ import json
 import logging
 import os
 import tempfile
-import uuid
 from typing import Any, Dict
 
 from passes_rs_py import generate_pass
@@ -77,9 +76,6 @@ class AppleWalletGenerator:
         discord_username = ""
         if isinstance(discord_data, dict):
             discord_username = discord_data.get("username") or ""
-
-        # Handle ops email safely
-        ops_email = user_data.get("ops_email") or ""
 
         config_dict = {
             "passTypeIdentifier": "pass.org.hackucf.join",

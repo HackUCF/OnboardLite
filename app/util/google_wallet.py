@@ -143,7 +143,7 @@ class GoogleWalletManager:
         try:
             # Check if the object already exists
             try:
-                existing_object = self.client.genericobject().get(resourceId=object_id).execute()
+                self.client.genericobject().get(resourceId=object_id).execute()
                 logger.info(f"Google Wallet object {object_id} already exists")
                 return object_id
             except HttpError as e:
@@ -158,7 +158,7 @@ class GoogleWalletManager:
             # Create new object
             new_object = self._create_pass_object_data(user_data)
 
-            response = self.client.genericobject().insert(body=new_object).execute()
+            self.client.genericobject().insert(body=new_object).execute()
             logger.info(f"Successfully created Google Wallet object {object_id}")
 
             return object_id
