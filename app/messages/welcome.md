@@ -6,7 +6,7 @@ These credentials can be used to the Hack@UCF Private Cloud, one of our many ben
 
 ```yaml
 Username: {{creds.get("username", "Not Set")}}
-Password: {{creds.get("password", f"Not Set")}}
+Password: {{creds.get("password", "Not Set")}}
 ```
 
 The password for the `Cyberlab` WiFi is currently `{{settings.infra.wifi}}`, but this is subject to change (and we'll let you know when that happens).
