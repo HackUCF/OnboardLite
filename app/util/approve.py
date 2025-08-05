@@ -46,7 +46,7 @@ class Approve:
             raise
         if len(users) == 1:
             logger.debug(f"User {users[0].id} already exists")
-            return {"username": users[0].get("username"), "password": "Account already exists use password previously created."}
+            return {"username": users[0].get("username"), "password": "Account already exists. Please use the password you previously created."}
 
         elif len(users) > 1:
             logger.error(f"Multiple users found with onboard-membership-id:{str(user_data.id)}")
