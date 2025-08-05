@@ -12,6 +12,7 @@ from app.util.database import engine
 from app.util.discord import Discord
 from app.util.email import Email
 from app.util.horsepass import HorsePass
+from app.util.messages import load_and_render_template
 from app.util.settings import Settings
 
 logger = logging.getLogger()
@@ -38,6 +39,18 @@ class Approve:
             realm_name=Settings().keycloak.realm,
             verify=True,
         )
+        try:
+            users = admin.get_users({"q": f"onboard-membership-id:{str(user_data.id)}"})
+        except Exception:
+            logger.exception("Keycloak Error")
+            raise
+        if users.len == 1:
+            logger.debug(f"User {users[0].id} already exists")
+            return {"username": users[0].get("username"), "password": "Account already exists use password previously created."}
+
+        elif users.len > 1:
+            logger.error(f"Multiple users found with onboard-membership-id:{str(user_data.id)}")
+            raise ValueError("Multiple users found")
         try:
             admin.create_user(
                 {
@@ -101,26 +114,7 @@ class Approve:
                     logger.exception("Failed to assign role")
 
                 # Send Discord message saying they are a member
-                welcome_msg = f"""Hello {user_data.first_name}, and welcome to Hack@UCF!
-
-This message is to confirm that your membership has processed successfully. You can access and edit your membership ID at https://{Settings().http.domain}/profile.
-
-These credentials can be used to the Hack@UCF Private Cloud, one of our many benefits of paying dues. This can be accessed at {Settings().infra.horizon} while on the CyberLab WiFi.
-
-```yaml
-Username: {creds.get("username", "Not Set")}
-Password: {creds.get("password", f"Not Set")}
-```
-
-The password for the `Cyberlab` WiFi is currently `{Settings().infra.wifi}`, but this is subject to change (and we'll let you know when that happens).
-
-If you need any help getting started there are instructions here https://help.hackucf.org.
-
-By using the Hack@UCF Infrastructure, you agree to the Acceptable Use Policy located at https://help.hackucf.org/misc/aup
-
-Happy Hacking,
-  - Hack@UCF Bot
-            """
+                welcome_msg = load_and_render_template("app/messages/welcome.md", user_data=user_data, creds=creds, settings=Settings())
                 try:
                     Discord.send_message(discord_id, welcome_msg)
                     Email.send_email("Welcome to Hack@UCF", welcome_msg, user_data.email)
@@ -136,21 +130,7 @@ Happy Hacking,
             elif user_data.did_pay_dues:
                 logger.info("	Paid dues but did not do other step!")
                 # Send a message on why this check failed.
-                fail_msg = f"""Hello {user_data.first_name},
-
-We wanted to let you know that you **did not** complete all of the steps for being able to become an Hack@UCF member.
-
-- Provided a name: {"✅" if user_data.first_name else "❌"}
-- Signed Ethics Form: {"✅" if user_data.ethics_form.signtime != 0 else "❌"}
-- Paid $10 dues: ✅
-
-Please complete all of these to become a full member. Once you do, visit https://{Settings().http.domain}/profile to re-run this check.
-
-If you think you have completed all of these, please reach out to an Exec on the Hack@UCF Discord.
-
-We hope to see you soon,
-  - Hack@UCF Bot
-"""
+                fail_msg = load_and_render_template("app/messages/membership_approval_failed.md", user_data=user_data, settings=Settings())
                 Discord.send_message(user_data.discord_id, fail_msg)
 
             else:

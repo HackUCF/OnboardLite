@@ -36,7 +36,7 @@ def run_uvicorn():
 def run_dev():
     host = os.getenv("ONBOARD_HOST", "0.0.0.0")
     port = os.getenv("ONBOARD_PORT", "8000")
-    command = ["uv", "run", "-m", "uvicorn", "app.main:app", "--host", host, "--port", port, "--reload"]
+    command = ["uv", "run", "-m", "uvicorn", "app.main:app", "--host", host, "--port", port, "--reload", "--log-level", "debug"]
     subprocess.run(command)
 
 
