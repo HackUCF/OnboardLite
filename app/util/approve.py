@@ -44,11 +44,11 @@ class Approve:
         except Exception:
             logger.exception("Keycloak Error")
             raise
-        if users.len == 1:
+        if len(users) == 1:
             logger.debug(f"User {users[0].id} already exists")
             return {"username": users[0].get("username"), "password": "Account already exists use password previously created."}
 
-        elif users.len > 1:
+        elif len(users) > 1:
             logger.error(f"Multiple users found with onboard-membership-id:{str(user_data.id)}")
             raise ValueError("Multiple users found")
         try:
