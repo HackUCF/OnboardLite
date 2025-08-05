@@ -1,46 +1,46 @@
 bws:
-    project_id: "your-project-id"
-    enable: "false"
+  project_id: "your-project-id"
+  enable: "false"
 
 jwt:
-    secret: "your_jwt_secret_key_here"  # Ensure this is at least 32 characters long
-    algorithm: "HS256"
-    lifetime_user: 9072000  # 15 weeks
-    lifetime_sudo: 86400    # 1 day
+  secret: "your_jwt_secret_key_here" # Ensure this is at least 32 characters long
+  algorithm: "HS256"
+  lifetime_user: 9072000 # 15 weeks
+  lifetime_sudo: 86400 # 1 day
 
 http:
-    domain: "join.hackucf.org"
+  domain: "join.hackucf.org"
 
 infra:
-    wifi: "your_wifi_password_here"
-    horizon: "https://horizon.hackucf.org"
+  wifi: "your_wifi_password_here"
+  horizon: "https://horizon.hackucf.org"
 
 discord:
-    client_id: "1"
-    secret: "your_discord_secret_here"
-    redirect_base: "https://join.hackucf.org/api/oauth/?redir="
-    scope: "email identify guilds.join"
-    bot_token: "1"
-    guild_id: "1"
-    member_role: "1"
-    enable: false
+  client_id: "1"
+  secret: "your_discord_secret_here"
+  redirect_base: "https://join.hackucf.org/api/oauth/?redir="
+  scope: "email identify guilds.join"
+  bot_token: "1"
+  guild_id: "1"
+  member_role: "1"
+  enable: false
 stripe:
-    api_key: "your_stripe_api_key_here"
-    webhook_secret: "your_stripe_webhook_secret_here"
-    price_id: "your_stripe_price_id_here"
-    url_success: "https://join.hackucf.org/final/"
-    url_failure: "https://join.hackucf.org/pay/"
-    pause_payments: true
+  api_key: "your_stripe_api_key_here"
+  webhook_secret: "your_stripe_webhook_secret_here"
+  price_id: "your_stripe_price_id_here"
+  url_success: "https://join.hackucf.org/final/"
+  url_failure: "https://join.hackucf.org/pay/"
+  pause_payments: true
 
 email:
-    smtp_server: "smtp.gmail.com"
-    email: "your_email@hackucf.org"
-    password: "your_email_password_here"
-    enable: false
+  smtp_server: "smtp.gmail.com"
+  email: "your_email@hackucf.org"
+  password: "your_email_password_here"
+  enable: false
 
 telemetry:
-    url: "your_telemetry_url_here"
-    enable: false
+  url: "your_telemetry_url_here"
+  enable: false
 keycloak:
   username: "admin-test"
   password: "test"
@@ -58,4 +58,17 @@ google_wallet:
   enable: false
 database:
   #url: "sqlite:////data/database.db"  # For docker create database/
-    url: "sqlite:///database/database.db" # For local dev create database/
+  url: "sqlite:///database/database.db" # For local dev create database/
+
+# API keys for programmatic access (always have admin permissions)
+# Format: onboard_live_<environment>_<random_string>
+api_keys:
+  # Example API keys (uncomment and customize as needed):
+  # - key: "onboard_live_prod_abc123def456789abcdef123456789abc"
+  #   name: "CI/CD Pipeline"
+  #   description: "GitHub Actions deployment automation"
+  #   created: "2024-01-01T00:00:00Z"
+  # - key: "onboard_live_prod_xyz789uvw012345pqrstu678901234xyz"
+  #   name: "Monitoring System"
+  #   description: "Prometheus metrics collection"
+  #   created: "2024-01-15T00:00:00Z"

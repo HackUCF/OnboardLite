@@ -6,25 +6,22 @@ import uuid
 from io import StringIO
 from typing import Optional
 
-from fastapi import APIRouter, Body, Cookie, Depends, Request, Response
+from fastapi import APIRouter, Body, Depends, HTTPException, Request, Response, status
 from fastapi.templating import Jinja2Templates
-from joserfc import jwt
 from sqlalchemy.orm import selectinload
 from sqlmodel import Session, select
 
 from app.models.user import (
-    MembershipHistoryModel,
     UserModel,
     UserModelMutable,
     user_to_dict,
     user_update_instance,
 )
 from app.util.approve import Approve
-from app.util.authentication import Authentication
+from app.util.auth_dependencies import CurrentAdmin
 from app.util.database import get_session
 from app.util.discord import Discord
 from app.util.email import Email
-from app.util.errors import Errors
 from app.util.membership_reset import MembershipReset
 from app.util.messages import load_and_render_template
 from app.util.settings import Settings
@@ -33,42 +30,29 @@ logger = logging.getLogger(__name__)
 
 templates = Jinja2Templates(directory="app/templates")
 
-router = APIRouter(prefix="/admin", tags=["Admin"], redirect_slashes=False, responses=Errors.basic_http())
+router = APIRouter(prefix="/admin", tags=["Admin"], redirect_slashes=False)
 
 
 @router.get("/")
-@Authentication.admin
-async def admin(request: Request, token: Optional[str] = Cookie(None)):
+async def admin(request: Request, current_admin: CurrentAdmin):
     """
     Renders the Admin home page.
     """
-    # Use pre-created JWT key object from settings
-    try:
-        payload = jwt.decode(
-            token,
-            Settings().jwt.key_object,
-            algorithms=Settings().jwt.algorithm,
-        )
-    except Exception as decode_error:
-        logger.error(f"JWT decode error in admin.py: {decode_error}")
-        return templates.TemplateResponse("error.html", {"request": request, "error": "Invalid token"}, status_code=401)
-    payload = payload.claims
     return templates.TemplateResponse(
         "admin_searcher.html",
         {
             "request": request,
-            "icon": payload["pfp"],
-            "name": payload["name"],
-            "id": payload["id"],
+            "icon": current_admin["pfp"],
+            "name": current_admin["name"],
+            "id": current_admin["id"],
         },
     )
 
 
 @router.get("/infra/")
-@Authentication.admin
 async def get_infra(
     request: Request,
-    token: Optional[str] = Cookie(None),
+    current_admin: CurrentAdmin,
     member_id: Optional[uuid.UUID] = None,
     session: Session = Depends(get_session),
 ):
@@ -77,7 +61,7 @@ async def get_infra(
     """
 
     if member_id is None:
-        return {"username": "", "password": "", "error": "Missing ?member_id"}
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Missing member_id parameter")
 
     user_data = session.exec(select(UserModel).where(UserModel.id == member_id)).one_or_none()
 
@@ -87,7 +71,7 @@ async def get_infra(
         creds = {}
 
     if not creds:
-        return Errors.generate(request, 404, "User Not Found")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
 
     # Get user data
 
@@ -105,10 +89,9 @@ async def get_infra(
 
 
 @router.get("/refresh/")
-@Authentication.admin
 async def get_refresh(
     request: Request,
-    token: Optional[str] = Cookie(None),
+    current_admin: CurrentAdmin,
     member_id: Optional[uuid.UUID] = None,
     session: Session = Depends(get_session),
 ):
@@ -116,23 +99,22 @@ async def get_refresh(
     API endpoint that re-runs the member verification workflow
     """
     if member_id is None:
-        return {"data": {}, "error": "Missing ?member_id"}
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Missing member_id parameter")
 
     Approve.approve_member(member_id)
 
     user_data = session.exec(select(UserModel).where(UserModel.id == member_id)).one_or_none()
 
     if not user_data:
-        return Errors.generate(request, 404, "User Not Found")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
 
     return {"data": user_data}
 
 
 @router.get("/get/")
-@Authentication.admin
 async def admin_get_single(
     request: Request,
-    token: Optional[str] = Cookie(None),
+    current_admin: CurrentAdmin,
     member_id: Optional[uuid.UUID] = None,
     session: Session = Depends(get_session),
 ):
@@ -140,22 +122,21 @@ async def admin_get_single(
     API endpoint that gets a specific user's data as JSON
     """
     if member_id is None:
-        return {"data": {}, "error": "Missing ?member_id"}
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Missing member_id parameter")
 
     statement = select(UserModel).where(UserModel.id == member_id).options(selectinload(UserModel.discord), selectinload(UserModel.ethics_form))
     user_data = user_to_dict(session.exec(statement).one_or_none())
 
     if not user_data:
-        return Errors.generate(request, 404, "User Not Found")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
 
     return {"data": user_data}
 
 
 @router.get("/get_by_snowflake/")
-@Authentication.admin
 async def admin_get_snowflake(
     request: Request,
-    token: Optional[str] = Cookie(None),
+    current_admin: CurrentAdmin,
     discord_id: Optional[str] = "FAIL",
     session: Session = Depends(get_session),
 ):
@@ -164,7 +145,7 @@ async def admin_get_snowflake(
     Designed for trusted federated systems to exchange data.
     """
     if discord_id == "FAIL":
-        return {"data": {}, "error": "Missing ?discord_id"}
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Missing discord_id parameter")
 
     statement = select(UserModel).where(UserModel.discord_id == discord_id).options(selectinload(UserModel.discord), selectinload(UserModel.ethics_form))
     data = user_to_dict(session.exec(statement).one_or_none())
@@ -175,7 +156,7 @@ async def admin_get_snowflake(
     #    )
     #
     if not data:
-        return Errors.generate(request, 404, "User Not Found")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
 
     # data = data[0]
 
@@ -183,10 +164,9 @@ async def admin_get_snowflake(
 
 
 @router.post("/message/")
-@Authentication.admin
 async def admin_post_discord_message(
     request: Request,
-    token: Optional[str] = Cookie(None),
+    current_admin: CurrentAdmin,
     member_id: Optional[uuid.UUID] = None,
     user_jwt: dict = Body(None),
     session: Session = Depends(get_session),
@@ -194,13 +174,13 @@ async def admin_post_discord_message(
     """
     API endpoint that gets a specific user's data as JSON
     """
-    if member_id == "FAIL":
-        return {"data": {}, "error": "Missing ?member_id"}
+    if member_id is None:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Missing member_id parameter")
 
     data = session.exec(select(UserModel).where(UserModel.id == member_id)).one_or_none()
 
     if not data:
-        return Errors.generate(request, 404, "User Not Found")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
 
     message_text = user_jwt.get("msg")
 
@@ -213,23 +193,25 @@ async def admin_post_discord_message(
 
 
 @router.post("/get/")
-@Authentication.admin
 async def admin_edit(
     request: Request,
-    token: Optional[str] = Cookie(None),
-    input_data: Optional[UserModelMutable] = {},
+    current_admin: CurrentAdmin,
+    input_data: UserModelMutable,
     session: Session = Depends(get_session),
 ):
     """
     API endpoint that modifies a given user's data
     """
+    if not input_data.id:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="User ID is required")
+
     member_id = input_data.id
 
     statement = select(UserModel).where(UserModel.id == member_id).options(selectinload(UserModel.discord), selectinload(UserModel.ethics_form))
     member_data = session.exec(statement).one_or_none()
 
     if not member_data:
-        return Errors.generate(request, 404, "User Not Found")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
     input_data = user_to_dict(input_data)
     user_update_instance(member_data, input_data)
 
@@ -239,10 +221,9 @@ async def admin_edit(
 
 
 @router.get("/list")
-@Authentication.admin
 async def admin_list(
     request: Request,
-    token: Optional[str] = Cookie(None),
+    current_admin: CurrentAdmin,
     session: Session = Depends(get_session),
 ):
     """
@@ -259,10 +240,9 @@ async def admin_list(
 
 
 @router.get("/csv")
-@Authentication.admin
 async def admin_list_csv(
     request: Request,
-    token: Optional[str] = Cookie(None),
+    current_admin: CurrentAdmin,
     session: Session = Depends(get_session),
 ):
     """
@@ -333,10 +313,9 @@ async def admin_list_csv(
 
 
 @router.post("/reset_memberships/")
-@Authentication.admin
 async def reset_all_memberships(
     request: Request,
-    token: Optional[str] = Cookie(None),
+    current_admin: CurrentAdmin,
     session: Session = Depends(get_session),
 ):
     """
@@ -346,13 +325,8 @@ async def reset_all_memberships(
     body = await request.json()
     reset_reason = body.get("reset_reason", "Annual membership reset")
 
-    # Get admin user info from JWT for logging
-    payload = jwt.decode(
-        token,
-        Settings().jwt.key_object,
-        algorithms=Settings().jwt.algorithm,
-    )
-    admin_user_id = uuid.UUID(payload.claims.get("id"))
+    # Get admin user info for logging
+    admin_user_id = uuid.UUID(current_admin.get("id"))
 
     result = MembershipReset.reset_all_memberships(
         session=session,
@@ -364,10 +338,9 @@ async def reset_all_memberships(
 
 
 @router.get("/membership_history/")
-@Authentication.admin
 async def get_membership_history(
     request: Request,
-    token: Optional[str] = Cookie(None),
+    current_admin: CurrentAdmin,
     user_id: Optional[uuid.UUID] = None,
     limit: int = 100,
     session: Session = Depends(get_session),
@@ -385,10 +358,9 @@ async def get_membership_history(
 
 
 @router.get("/reset_summary/")
-@Authentication.admin
 async def get_reset_summary(
     request: Request,
-    token: Optional[str] = Cookie(None),
+    current_admin: CurrentAdmin,
     session: Session = Depends(get_session),
 ):
     """
@@ -400,10 +372,9 @@ async def get_reset_summary(
 
 
 @router.post("/restore_membership/")
-@Authentication.admin
 async def restore_membership(
     request: Request,
-    token: Optional[str] = Cookie(None),
+    current_admin: CurrentAdmin,
     session: Session = Depends(get_session),
 ):
     """
@@ -417,13 +388,8 @@ async def restore_membership(
     if not user_id or not history_record_id:
         return {"success": False, "error": "Missing user_id or history_record_id"}
 
-    # Get admin user info from JWT for logging
-    payload = jwt.decode(
-        token,
-        Settings().jwt.key_object,
-        algorithms=Settings().jwt.algorithm,
-    )
-    admin_user_id = uuid.UUID(payload.claims.get("id"))
+    # Get admin user info for logging
+    admin_user_id = uuid.UUID(current_admin.get("id"))
 
     result = MembershipReset.restore_membership_from_history(
         session=session,

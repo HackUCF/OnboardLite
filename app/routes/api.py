@@ -3,24 +3,22 @@
 import json
 import logging
 import uuid
-from typing import Optional
 
-from fastapi import APIRouter, Cookie, Depends, HTTPException, Request
+from fastapi import APIRouter, Depends, HTTPException, Request, status
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import selectinload
 from sqlmodel import Session, select
 
 from app.models.info import InfoModel
 from app.models.user import PublicContact, UserModel, user_update_instance
-from app.util.authentication import Authentication
+from app.util.auth_dependencies import CurrentMember
 from app.util.database import get_session
-from app.util.errors import Errors
 from app.util.forms import Forms, apply_fuzzy_parsing, transform_dict
 from app.util.kennelish import Transformer
 
 logger = logging.getLogger(__name__)
 
-router = APIRouter(prefix="/api", tags=["API"], responses=Errors.basic_http())
+router = APIRouter(prefix="/api", tags=["API"])
 
 
 @router.get("/")
@@ -50,7 +48,7 @@ async def get_form(num: str):
     try:
         return Forms.get_form_body(num)
     except FileNotFoundError:
-        return HTTPException(status_code=404, detail="Form not found")
+        raise HTTPException(status_code=404, detail="Form not found")
 
 
 """
@@ -128,19 +126,17 @@ Allows updating the user's database using a schema assumed by the Kennelish file
 #
 #
 @router.post("/form/{num}")
-@Authentication.member
 async def post_form(
     request: Request,
-    token: Optional[str] = Cookie(None),
-    user_jwt: Optional[object] = {},
-    num: str = 1,
+    current_user: CurrentMember,
+    num: str,
     session: Session = Depends(get_session),
 ):
     # Get Kennelish data
     try:
         kennelish_data = Forms.get_form_body(num)
     except FileNotFoundError:
-        return HTTPException(status_code=404, detail="Form not found")
+        raise HTTPException(status_code=404, detail="Form not found")
 
     model = Transformer.kennelish_to_pydantic(kennelish_data)
 
@@ -157,12 +153,12 @@ async def post_form(
     # Transform the dictionary
     validated_data = transform_dict(validated_data)
 
-    statement = select(UserModel).where(UserModel.id == uuid.UUID(user_jwt["id"])).options(selectinload(UserModel.discord), selectinload(UserModel.ethics_form))
+    statement = select(UserModel).where(UserModel.id == uuid.UUID(current_user["id"])).options(selectinload(UserModel.discord), selectinload(UserModel.ethics_form))
     result = session.exec(statement)
     user = result.one_or_none()
 
     if not user:
-        raise HTTPException(status_code=422, detail="User not found")
+        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail="User not found")
 
     user_update_instance(user, validated_data)
 
@@ -173,7 +169,7 @@ async def post_form(
     except IntegrityError as e:
         logger.error(e)
         session.rollback()
-        raise HTTPException(status_code=422, detail=("Integrity Error. " + str(e).split("")[0]))
+        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=("Integrity Error. " + str(e).split("")[0]))
     session.refresh(user)
 
     return user.model_dump()

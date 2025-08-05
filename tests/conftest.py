@@ -9,7 +9,7 @@ from sqlmodel.pool import StaticPool
 
 from app.main import app, get_session
 from app.models.user import DiscordModel, UserModel
-from app.util.authentication import Authentication
+from app.util.auth_dependencies import Authentication
 
 
 @pytest.fixture(name="engine")
