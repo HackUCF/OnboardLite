@@ -41,6 +41,6 @@ class Email:
         try:
             with smtplib.SMTP_SSL(smtp_host, 465) as smtp_server:
                 smtp_server.login(email, password)
-            smtp_server.sendmail(email, recipient, msg.as_string())
+                smtp_server.sendmail(email, recipient, msg.as_string())
         except Exception as e:
             logging.error(f"Error sending email: {e}")
