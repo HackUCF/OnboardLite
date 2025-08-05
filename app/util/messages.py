@@ -1,6 +1,9 @@
+import logging
 from pathlib import Path
 
 from jinja2 import Environment, FileSystemLoader
+
+logger = logging.getLogger()
 
 
 def load_and_render_template(template_path, **context):
@@ -23,4 +26,6 @@ def load_and_render_template(template_path, **context):
     template = env.get_template(template_name)
 
     # Render the template
-    return template.render(**context)
+    message = template.render(**context)
+    logger.debug(f"Rendered template: {message}")
+    return message

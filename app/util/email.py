@@ -43,4 +43,4 @@ class Email:
                 smtp_server.login(email, password)
                 smtp_server.sendmail(email, recipient, msg.as_string())
         except Exception as e:
-            logging.error(f"Error sending email: {e}")
+            logger.error(f"Error sending email: {e}")
