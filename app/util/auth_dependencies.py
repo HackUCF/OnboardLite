@@ -215,23 +215,3 @@ class Authentication:
             logger.error(f"JWT encode error: {encode_error}")
             raise ValueError(f"Failed to encode JWT: {encode_error}")
         return bearer
-
-    @staticmethod
-    def member(func):
-        """
-        Legacy decorator - DEPRECATED
-        Use CurrentMember dependency instead
-        """
-        logger.warning("Authentication.member decorator is deprecated. Use CurrentMember dependency instead.")
-        # Implementation would wrap the function but we want to discourage usage
-        return func
-
-    @staticmethod
-    def admin(func):
-        """
-        Legacy decorator - DEPRECATED
-        Use CurrentAdmin dependency instead
-        """
-        logger.warning("Authentication.admin decorator is deprecated. Use CurrentAdmin dependency instead.")
-        # Implementation would wrap the function but we want to discourage usage
-        return func
