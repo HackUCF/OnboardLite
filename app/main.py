@@ -56,7 +56,7 @@ if Settings().telemetry.enable:
 
 if Settings().loglevel:
     logging.basicConfig(
-        level=Settings().loglevel,
+        level=getattr(logging, Settings().loglevel.upper()),
         format="%(asctime)s - %(levelname)s - %(name)s - %(message)s",
         datefmt="%Y-%m-%d %H:%M:%S",
     )
