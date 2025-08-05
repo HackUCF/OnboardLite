@@ -17,6 +17,7 @@ logger = logging.getLogger(__name__)
 
 config_file = pathlib.Path(os.getenv("ONBOARD_CONFIG_FILE", "config.yml")).resolve()
 onboard_env = os.getenv("ONBOARD_ENV", "prod")
+loglevel = os.getenv("ONBOARD_LOGLEVEL", "INFO")
 
 if onboard_env == "dev":
     import hashlib
@@ -406,3 +407,4 @@ class Settings(BaseSettings, metaclass=SingletonBaseSettingsMeta):
     telemetry: Optional[TelemetryConfig] = telemetry_config
     apple_wallet: AppleWalletConfig = apple_wallet_config
     env: Optional[str] = onboard_env
+    loglevel: Optional[str] = loglevel
