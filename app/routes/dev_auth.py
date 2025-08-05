@@ -37,7 +37,7 @@ async def create_dev_user(request: Request, session: Session = Depends(get_sessi
 
     user = UserModel(id=user_id, discord_id=discord_id, sudo=sudo)
 
-    discord_user = DiscordModel(username=f"devuser-{user_id}", email=f"devuser@mail.com", user_id=user_id, user=user)
+    discord_user = DiscordModel(username=f"devuser-{user_id}", email="devuser@mail.com", user_id=user_id, user=user)
 
     session.add(user)
     session.commit()
