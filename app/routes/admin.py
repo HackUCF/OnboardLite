@@ -96,7 +96,7 @@ async def get_infra(
     logger.debug(f"Rendered message: {new_creds_msg}")
 
     # Send Discord message
-    Discord.send_message(user_data.get("discord_id"), new_creds_msg)
+    Discord.send_message(user_data.discord_id, new_creds_msg)
     Email.send_email("Hack@UCF Private Cloud Credentials", new_creds_msg, user_data.email)
     return {
         "username": creds.get("username"),
