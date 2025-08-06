@@ -2,6 +2,7 @@
 # Copyright (c) 2024 Collegiate Cyber Defense Club
 import logging
 import time
+import uuid
 from typing import Annotated, Optional
 
 from fastapi import Cookie, Depends, HTTPException, Request, status
@@ -72,12 +73,15 @@ def _authenticate_api_key(auth_header: str) -> dict:
 
     logger.info(f"API key authentication successful: {key_config.name}")
 
-    # Return standardized JWT payload
+    API_KEY_NAMESPACE = uuid.uuid5(uuid.NAMESPACE_URL, Settings().http.domain)
+    api_key_uuid = str(uuid.uuid5(API_KEY_NAMESPACE, api_key))
+    logger.debug(f"API key UUID generated: {api_key_uuid}")
+
     return {
         "discord": None,
         "name": "API Key",
         "pfp": None,
-        "id": f"api_key_{hash(api_key) % 1000000}",
+        "id": api_key_uuid,
         "sudo": True,
         "is_full_member": True,
         "issued": time.time(),
