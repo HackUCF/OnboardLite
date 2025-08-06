@@ -166,22 +166,14 @@ def get_current_admin(request: Request, current_user: dict = Depends(get_current
     return current_user
 
 
-# Type aliases for better IDE support and cleaner endpoint signatures
-# These will NOT appear in OpenAPI specs because they use Depends()
 CurrentUser = Annotated[dict, Depends(get_current_user)]
 CurrentMember = Annotated[dict, Depends(get_current_member)]
 CurrentAdmin = Annotated[dict, Depends(get_current_admin)]
 
-# Alternative approach if the above shows up in OpenAPI (it shouldn't):
-# Use these directly in function signatures instead of type aliases
-# current_admin: dict = Depends(get_current_admin)
 
-
-# Legacy compatibility function for gradual migration
 class Authentication:
     """
-    Legacy Authentication class for backward compatibility
-    New code should use FastAPI dependencies instead
+    Generate JWT token for user authentication
     """
 
     @staticmethod
