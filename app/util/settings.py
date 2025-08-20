@@ -8,11 +8,11 @@ import re
 import subprocess
 from typing import List, Optional
 
-from requests_oauthlib.oauth1_session import OAuth1
 import yaml
 from joserfc.jwk import OctKey
 from pydantic import BaseModel, Field, SecretStr, constr, model_validator
 from pydantic_settings import BaseSettings
+from requests_oauthlib.oauth1_session import OAuth1
 
 logger = logging.getLogger(__name__)
 
@@ -298,7 +298,6 @@ class JwtConfig(BaseModel):
 
 if settings.get("jwt"):
     jwt_config = JwtConfig(**settings["jwt"])
-
 
 
 class InfraConfig(BaseModel):
