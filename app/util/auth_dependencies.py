@@ -3,6 +3,7 @@
 import logging
 import time
 import uuid
+import hashlib
 from typing import Annotated, Optional
 
 from fastapi import Cookie, Depends, HTTPException, Request, status
@@ -121,7 +122,8 @@ def get_current_user(request: Request, token: Optional[str] = Cookie(None)) -> d
             raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=str(e))
 
         # For web requests, redirect to Discord OAuth
-        raise HTTPException(status_code=status.HTTP_302_FOUND, detail="Authentication required", headers={"Location": f"/discord/new?redir={request.url.path}"})
+        redir_jwt = sign_redirect_url(request.url.path)
+        raise HTTPException(status_code=status.HTTP_302_FOUND, detail="Authentication required", headers={"Location": f"/discord/new?redir={redir_jwt}"})
 
     # Session timeout check (skip for API keys)
     if not user_jwt.get("api_key", False):
@@ -130,7 +132,8 @@ def get_current_user(request: Request, token: Optional[str] = Cookie(None)) -> d
             if request.headers.get("Authorization"):
                 raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Session expired")
             else:
-                raise HTTPException(status_code=status.HTTP_302_FOUND, detail="Session expired", headers={"Location": f"/discord/new?redir={request.url.path}"})
+                redir_jwt = sign_redirect_url(request.url.path)
+                raise HTTPException(status_code=status.HTTP_302_FOUND, detail="Session expired", headers={"Location": f"/discord/new?redir={redir_jwt}"})
 
     # Set Sentry user context if enabled
     if Settings().telemetry.enable and set_user is not None:
@@ -211,3 +214,75 @@ class Authentication:
             logger.error(f"JWT encode error: {encode_error}")
             raise ValueError(f"Failed to encode JWT: {encode_error}")
         return bearer
+
+
+def sign_redirect_url(url: str) -> str:
+    """
+    Sign a redirect URL to prevent tampering (CWE-601 mitigation).
+
+    Args:
+        url: The redirect URL to sign
+
+    Returns:
+        A signed token representing the URL
+    """
+
+    # Create a JWT payload with the URL and expiration
+    payload = {
+        "redirect_url": url,
+        "iat": int(time.time()),
+        "exp": int(time.time()) + 300,  # 5 minute expiration
+        "purpose": "redirect"
+    }
+
+
+    try:
+        token = jwt.encode(
+            {"alg": Settings().jwt.algorithm},
+            payload,
+            Settings().jwt.redir_key,
+        )
+        return token
+    except Exception as e:
+        logger.error(f"Failed to sign redirect URL: {e}")
+        raise ValueError("Failed to sign redirect URL")
+
+
+def verify_redirect_url(signed_url: str) -> str:
+    """
+    Verify a signed redirect URL and extract the original URL.
+
+    Args:
+        signed_url: The signed URL token
+
+    Returns:
+        The original URL if valid, otherwise "/join/2"
+    """
+
+
+    try:
+        decoded = jwt.decode(
+            signed_url,
+            Settings().jwt.redir_key,
+            algorithms=[Settings().jwt.algorithm],
+        )
+
+        payload = decoded.claims
+
+        # Verify this is a redirect token
+        if payload.get("purpose") != "redirect":
+            logger.warning("Invalid token purpose for redirect")
+            return "/join/2"
+
+        redirect_url = payload.get("redirect_url", "/join/2")
+
+        # Basic sanity check - must be relative URL
+        if redirect_url.startswith("/") and not redirect_url.startswith("//"):
+            return redirect_url
+        else:
+            logger.warning(f"Invalid redirect URL format: {redirect_url}")
+            return "/join/2"
+
+    except Exception as e:
+        logger.warning(f"Failed to verify redirect URL: {e}")
+        return "/join/2"

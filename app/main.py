@@ -35,7 +35,7 @@ if os.getenv("ENV") == "development":
 from app.util.approve import Approve
 
 # Import middleware
-from app.util.auth_dependencies import Authentication, CurrentMember
+from app.util.auth_dependencies import Authentication, CurrentMember, verify_redirect_url, sign_redirect_url
 from app.util.database import get_session, init_db
 from app.util.discord import Discord
 
@@ -242,11 +242,9 @@ This is what is linked to by Onboard.
 
 
 @app.get("/discord/new/")
-async def oauth_transformer(redir: str = "/join/2"):
-    # Open redirect check
-    hostname = urlparse(redir).netloc
-    if hostname != "" and hostname != Settings().http.domain:
-        redir = "/join/2"
+async def oauth_transformer(redir: str = None):
+    if not redir:
+        redir = sign_redirect_url("/join/2")
 
     oauth = OAuth2Session(
         Settings().discord.client_id,
@@ -278,13 +276,10 @@ async def oauth_transformer_new(
     session: Session = Depends(get_session),
 ):
     # Open redirect check
-    if redir == "_redir":
-        redir = redir_endpoint
-
-    hostname = urlparse(redir).netloc
-
-    if hostname != "" and hostname != Settings().http.domain:
-        redir = "/join/2"
+    if redir == "_redir" and redir_endpoint:
+        redir = verify_redirect_url(redir_endpoint)
+    else:
+        redir = verify_redirect_url(sign_redirect_url(redir))
 
     if code is None:
         return Errors.generate(

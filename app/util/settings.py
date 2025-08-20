@@ -8,6 +8,7 @@ import re
 import subprocess
 from typing import List, Optional
 
+from requests_oauthlib.oauth1_session import OAuth1
 import yaml
 from joserfc.jwk import OctKey
 from pydantic import BaseModel, Field, SecretStr, constr, model_validator
@@ -281,23 +282,23 @@ class JwtConfig(BaseModel):
     lifetime_user: Optional[int] = Field(9072000)
     lifetime_sudo: Optional[int] = Field(86400)
     key_object: Optional[OctKey] = Field(default=None, exclude=True)
+    redir_key: Optional[OctKey] = Field(default=None, exclude=True)
+    oauth_key: Optional[OctKey] = Field(default=None, exclude=True)
 
     def __init__(self, **data):
         super().__init__(**data)
         # Create JWT key object during initialization
         try:
             self.key_object = OctKey.import_key(self.secret.get_secret_value())
+            self.redir_key = OctKey.import_key(self.secret.get_secret_value() + "redir")
+            self.oauth_key = OctKey.import_key(self.secret.get_secret_value() + "oauth")
         except Exception as e:
             raise ValueError(f"Invalid JWT secret key: {e}") from e
 
 
 if settings.get("jwt"):
     jwt_config = JwtConfig(**settings["jwt"])
-elif onboard_env == "dev":
-    # Provides a stable secret per dev instance, horribly insecure for prod
-    hostname = socket.gethostname()
-    secret = hashlib.sha256(hostname.encode("utf-8")).hexdigest()
-    jwt_config = JwtConfig(secret=secret)
+
 
 
 class InfraConfig(BaseModel):
