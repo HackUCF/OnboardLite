@@ -1,9 +1,9 @@
 # SPDX-License-Identifier: MIT
 # Copyright (c) 2024 Collegiate Cyber Defense Club
+import hashlib
 import logging
 import time
 import uuid
-import hashlib
 from typing import Annotated, Optional
 
 from fastapi import Cookie, Depends, HTTPException, Request, status
@@ -232,9 +232,8 @@ def sign_redirect_url(url: str) -> str:
         "redirect_url": url,
         "iat": int(time.time()),
         "exp": int(time.time()) + 300,  # 5 minute expiration
-        "purpose": "redirect"
+        "purpose": "redirect",
     }
-
 
     try:
         token = jwt.encode(
@@ -258,7 +257,6 @@ def verify_redirect_url(signed_url: str) -> str:
     Returns:
         The original URL if valid, otherwise "/join/2"
     """
-
 
     try:
         decoded = jwt.decode(
