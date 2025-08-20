@@ -39,13 +39,20 @@ class Approve:
             realm_name=Settings().keycloak.realm,
             verify=True,
         )
+
         try:
             users = admin.get_users({"q": f"onboard-membership-id:{str(user_data.id)}"})
         except Exception:
-            logger.exception("Keycloak Error")
+            logger.exception("Keycloak Error - Failed to retrieve users by onboard-membership-id")
             raise
         if len(users) == 1:
-            logger.debug(f"User {users[0].id} already exists")
+            try:
+                admin.update_user(user_id=users[0].get("id"), payload={"enabled": True})
+                logger.info(f"User {user_data.id} Keycloak user {users[0].get('id')} enabled")
+            except Exception:
+                logger.exception(f"Keycloak Error - Failed to enable user {user_data.id} ")
+                raise
+            logger.debug(f"User {users[0].get('id')} already exists")
             return {"username": users[0].get("username"), "password": "Account already exists. Please use the password you previously created."}
 
         elif len(users) > 1:
