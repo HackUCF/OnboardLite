@@ -35,7 +35,7 @@ if os.getenv("ENV") == "development":
 from app.util.approve import Approve
 
 # Import middleware
-from app.util.auth_dependencies import Authentication, CurrentMember, verify_redirect_url, sign_redirect_url
+from app.util.auth_dependencies import Authentication, CurrentMember, sign_redirect_url, verify_redirect_url
 from app.util.database import get_session, init_db
 from app.util.discord import Discord
 
@@ -255,7 +255,12 @@ async def oauth_transformer(redir: str = None):
 
     rr = RedirectResponse(authorization_url, status_code=302)
 
-    rr.set_cookie(key="redir_endpoint", value=redir, max_age=300)
+    if Settings().env == "dev":
+        rr.set_cookie(key="redir_endpoint", value=redir, max_age=300, httponly=True, samesite="lax", secure=False)
+        rr.set_cookie(key="oauth_state", value=state, max_age=300, httponly=True, samesite="lax", secure=False)
+    else:
+        rr.set_cookie(key="redir_endpoint", value=redir, max_age=300, httponly=True, samesite="lax", secure=True)
+        rr.set_cookie(key="oauth_state", value=state, max_age=300, httponly=True, samesite="lax", secure=True)
 
     return rr
 
@@ -271,8 +276,10 @@ async def oauth_transformer_new(
     request: Request,
     response: Response,
     code: str = None,
+    state: str = None,
     redir: str = "/join/2",
     redir_endpoint: Optional[str] = Cookie(None),
+    oauth_state: Optional[str] = Cookie(None),
     session: Session = Depends(get_session),
 ):
     # Open redirect check
@@ -280,6 +287,14 @@ async def oauth_transformer_new(
         redir = verify_redirect_url(redir_endpoint)
     else:
         redir = verify_redirect_url(sign_redirect_url(redir))
+
+    if not state or not oauth_state or state != oauth_state:
+        return Errors.generate(
+            request,
+            400,
+            "Invalid OAuth state",
+            essay="OAuth state validation failed. This may indicate a CSRF attack.",
+        )
 
     if code is None:
         return Errors.generate(
@@ -370,6 +385,7 @@ async def oauth_transformer_new(
     # Clear redirect cookie.
     rr.delete_cookie("redir_endpoint")
     rr.delete_cookie("captcha")
+    rr.delete_cookie("oauth_state")
     return rr
 
 
