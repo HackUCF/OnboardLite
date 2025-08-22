@@ -284,9 +284,13 @@ async def oauth_transformer_new(
 ):
     # Open redirect check
     if redir == "_redir" and redir_endpoint:
-        redir = verify_redirect_url(redir_endpoint)
+        redir_url = verify_redirect_url(redir_endpoint)
     else:
-        redir = verify_redirect_url(sign_redirect_url(redir))
+        return Errors.generate(
+            request,
+            400,
+            "Invalid Redirect Endpoint",
+        )
 
     if not state or not oauth_state or state != oauth_state:
         return Errors.generate(
@@ -359,7 +363,7 @@ async def oauth_transformer_new(
 
     # Create JWT. This should be the only way to issue JWTs.
     bearer = Authentication.create_jwt(user)
-    rr = RedirectResponse(redir, status_code=status.HTTP_302_FOUND)
+    rr = RedirectResponse(redir_url, status_code=status.HTTP_302_FOUND)
     if user.sudo:
         max_age = Settings().jwt.lifetime_sudo
     else:
