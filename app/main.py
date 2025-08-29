@@ -248,7 +248,7 @@ async def oauth_transformer(redir: str = None):
 
     oauth = OAuth2Session(
         Settings().discord.client_id,
-        redirect_uri=Settings().discord.redirect_base + "_redir",
+        redirect_uri=Settings().discord.redirect_base,
         scope=Settings().discord.scope,
     )
     authorization_url, state = oauth.authorization_url("https://discord.com/api/oauth2/authorize")
@@ -277,13 +277,12 @@ async def oauth_transformer_new(
     response: Response,
     code: str = None,
     state: str = None,
-    redir: str = "/join/2",
     redir_endpoint: Optional[str] = Cookie(None),
     oauth_state: Optional[str] = Cookie(None),
     session: Session = Depends(get_session),
 ):
     # Open redirect check
-    if redir == "_redir" and redir_endpoint:
+    if redir_endpoint:
         redir_url = verify_redirect_url(redir_endpoint)
     else:
         return Errors.generate(
@@ -311,7 +310,7 @@ async def oauth_transformer_new(
     # Get data from Discord
     oauth = OAuth2Session(
         Settings().discord.client_id,
-        redirect_uri=Settings().discord.redirect_base + "_redir",
+        redirect_uri=Settings().discord.redirect_base,
         scope=Settings().discord.scope,
     )
 
