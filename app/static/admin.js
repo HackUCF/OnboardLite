@@ -267,7 +267,11 @@ function showUser(userId) {
     : "Promote to Admin";
 
   document.getElementById("joinInfra").onclick = (evt) => {
-    inviteToInfra(user.id);
+    inviteToInfra(user.id, false);
+  };
+
+  document.getElementById("infraReset").onclick = (evt) => {
+    inviteToInfra(user.id, true);
   };
   document.getElementById("infraLabel").innerText = user.infra_email
     ? "Reset Infra Account"
@@ -352,8 +356,10 @@ function verifyUser(user_id) {
     });
 }
 
-function inviteToInfra(user_id) {
-  fetch("/admin/infra?member_id=" + user_id)
+function inviteToInfra(user_id, reset_password = false) {
+  fetch(
+    "/admin/infra?member_id=" + user_id + "&reset_password=" + reset_password,
+  )
     .then((data) => {
       return data.json();
     })
