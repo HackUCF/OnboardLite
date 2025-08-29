@@ -6,7 +6,7 @@ import uuid
 from io import StringIO
 from typing import Optional
 
-from fastapi import APIRouter, Body, Depends, HTTPException, Request, Response, status
+from fastapi import APIRouter, BackgroundTasks, Body, Depends, HTTPException, Request, Response, status
 from fastapi.templating import Jinja2Templates
 from sqlalchemy.orm import selectinload
 from sqlmodel import Session, select
@@ -52,6 +52,7 @@ async def admin(request: Request, current_admin: CurrentAdmin):
 @router.get("/infra/")
 async def get_infra(
     request: Request,
+    background_tasks: BackgroundTasks,
     current_admin: CurrentAdmin,
     member_id: Optional[uuid.UUID] = None,
     session: Session = Depends(get_session),
@@ -92,6 +93,7 @@ async def get_infra(
 @router.get("/refresh/")
 async def get_refresh(
     request: Request,
+    background_tasks: BackgroundTasks,
     current_admin: CurrentAdmin,
     member_id: Optional[uuid.UUID] = None,
     session: Session = Depends(get_session),
@@ -102,7 +104,7 @@ async def get_refresh(
     if member_id is None:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Missing member_id parameter")
 
-    Approve.approve_member(member_id)
+    background_tasks.add_task(Approve.approve_member, member_id)
 
     user_data = session.exec(select(UserModel).where(UserModel.id == member_id)).one_or_none()
 

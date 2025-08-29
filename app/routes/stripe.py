@@ -4,7 +4,7 @@ import logging
 import uuid
 
 import stripe
-from fastapi import APIRouter, Depends, HTTPException, Request, status
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Request, status
 from fastapi.responses import RedirectResponse
 from fastapi.templating import Jinja2Templates
 from sqlalchemy.orm import selectinload
@@ -131,7 +131,7 @@ async def create_checkout_session(
 
 
 @router.post("/webhook/validate")
-async def webhook(request: Request, session: Session = Depends(get_session)):
+async def webhook(request: Request, background_tasks: BackgroundTasks, session: Session = Depends(get_session)):
     payload = await request.body()
     sig_header = request.headers.get("stripe-signature")
     event = None
@@ -155,17 +155,17 @@ async def webhook(request: Request, session: Session = Depends(get_session)):
 
         if checkout_session.payment_status == "paid":
             # Mark as paid.
-            pay_dues(checkout_session, session)
+            pay_dues(checkout_session, session, background_tasks)
 
     elif event["type"] == "checkout.session.async_payment_succeeded":
         checkout_session = event["data"]["object"]
-        pay_dues(checkout_session, session)
+        pay_dues(checkout_session, session, background_tasks)
 
     # Passed signature verification
     return {"status": "success"}
 
 
-def pay_dues(checkout_session, db_session):
+def pay_dues(checkout_session, db_session, background_tasks):
     customer_email = checkout_session.get("customer_email")
 
     user_data = db_session.exec(select(UserModel).where(UserModel.email == customer_email)).one_or_none()
@@ -178,5 +178,5 @@ def pay_dues(checkout_session, db_session):
     db_session.commit()
     db_session.refresh(user_data)
 
-    # Do checks to approve membership status.
-    Approve.approve_member(member_id)
+    # Do checks to approve membership status in background.
+    background_tasks.add_task(Approve.approve_member, member_id)

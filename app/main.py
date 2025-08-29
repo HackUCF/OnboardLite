@@ -6,7 +6,7 @@ import uuid
 from typing import Optional
 from urllib.parse import urlparse
 
-from fastapi import Cookie, Depends, FastAPI, Request, Response, status
+from fastapi import BackgroundTasks, Cookie, Depends, FastAPI, Request, Response, status
 from fastapi.openapi.utils import get_openapi
 from fastapi.responses import FileResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
@@ -413,14 +413,15 @@ Renders a basic "my membership" page
 @app.get("/profile/")
 async def profile(
     request: Request,
+    background_tasks: BackgroundTasks,
     current_user: CurrentMember,
     session: Session = Depends(get_session),
 ):
     statement = select(UserModel).where(UserModel.id == uuid.UUID(current_user["id"])).options(selectinload(UserModel.discord), selectinload(UserModel.ethics_form))
     user_data = user_to_dict(session.exec(statement).one_or_none())
 
-    # Re-run approval workflow.
-    Approve.approve_member(uuid.UUID(current_user.get("id")))
+    # Re-run approval workflow in background.
+    background_tasks.add_task(Approve.approve_member, uuid.UUID(current_user.get("id")))
 
     return templates.TemplateResponse("profile.html", {"request": request, "user_data": user_data})
 
