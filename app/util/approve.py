@@ -1,6 +1,7 @@
 # SPDX-License-Identifier: MIT
 # Copyright (c) 2024 Collegiate Cyber Defense Club
 import logging
+import re
 import uuid
 
 from keycloak import KeycloakAdmin
@@ -29,12 +30,29 @@ class Approve:
     def __init__(self):
         pass
 
+    @staticmethod
+    def sanitize_username(username: str) -> str:
+        """Strip invalid characters from username"""
+        # Remove characters: <>& "' spaces tabs vertical tabs $%!#?§,;:*~/\|^=[]{}()`
+        invalid_chars = r"[<>&\"'\\s\\v\\h$%!#?§,;:*~/\\|^=\[\]{}()`]"
+        return re.sub(invalid_chars, "", username)
+
+    @staticmethod
+    def sanitize_name(name: str) -> str:
+        """Strip invalid characters from first and last names"""
+        # Remove characters: <>& " vertical tabs $%!#?§;*~/\|^=[]{}()
+        invalid_chars = r"[<>&\"\v$%!#?§;*~/\\|^=\[\]{}()]"
+        return re.sub(invalid_chars, "", name)
+
     def provision_infra(
         member_id: uuid.UUID,
         user_data,
         reset_password=False,
     ):
-        username = user_data.discord.username[:20].rstrip(".")
+        username = Approve.sanitize_username(user_data.discord.username[:20]).rstrip(".")
+        first_name = Approve.sanitize_name(user_data.first_name)
+        last_name = Approve.sanitize_name(user_data.surname)
+
         password = HorsePass.gen()
         admin = KeycloakAdmin(
             server_url=Settings().keycloak.url,
@@ -72,8 +90,8 @@ class Approve:
                     "email": user_data.email,
                     "username": username,
                     "enabled": True,
-                    "firstName": user_data.first_name,
-                    "lastName": user_data.surname,
+                    "firstName": first_name,
+                    "lastName": last_name,
                     "attributes": {"onboard-membership-id": str(user_data.id)},
                     "credentials": [
                         {

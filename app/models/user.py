@@ -5,6 +5,7 @@ import uuid
 from datetime import datetime, timezone
 from typing import Any, Optional
 
+from email_validator import EmailNotValidError, validate_email
 from pydantic import BaseModel, validator
 from sqlmodel import Field, Relationship, SQLModel
 
@@ -119,11 +120,14 @@ class UserModel(SQLModel, table=True):
         return shirt_size
 
     @validator("email")
-    def nid_regex(cls, email):
-        # regex for email
-        pattern = re.compile(r"^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$")
-        if pattern.match(email) is None:
-            raise ValueError("Email failed regex validation")
+    def email_validation(cls, email):
+        if email:  # Only validate if email is provided
+            try:
+                emailinfo = validate_email(email, check_deliverability=False)
+                return emailinfo.normalized
+            except EmailNotValidError:
+                raise ValueError("Email is not valid")
+        return email
 
 
 # What admins can edit.
