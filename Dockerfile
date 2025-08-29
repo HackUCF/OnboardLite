@@ -33,13 +33,13 @@ COPY uv.lock .
 ENV UV_LINK_MODE=copy
 
 RUN --mount=type=cache,target=/root/.cache/uv \
-    uv sync --locked --compile-bytecode
+    uv sync --locked --no-dev --compile-bytecode
 
 COPY ./app ./app
 
 EXPOSE 8000
 
 # Start the FastAPI application
-ENTRYPOINT ["uv", "run", "app/entry.py"]
+ENTRYPOINT ["uv", "run", "--no-dev", "app/entry.py"]
 
 CMD []
