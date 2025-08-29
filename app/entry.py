@@ -5,29 +5,6 @@ import subprocess
 import sys
 
 
-# Define the default command to run granian with environment variables
-def run_granian():
-    host = os.getenv("ONBOARD_HOST", "0.0.0.0")
-    port = os.getenv("ONBOARD_PORT", "8000")
-    workers = os.getenv("ONBOARD_WORKERS", "2")
-
-    command = [
-        "uv",
-        "run",
-        "-m",
-        "uvicorn",
-        "--host",
-        host,
-        "--port",
-        port,
-        "--workers",
-        workers,
-        "app.main:app",
-    ]
-
-    subprocess.run(command)
-
-
 # Define the default command to run uvicorn with environment variables
 def run_uvicorn():
     host = os.getenv("ONBOARD_HOST", "0.0.0.0")
@@ -76,9 +53,5 @@ if __name__ == "__main__":
         run_migrate()
     elif len(sys.argv) > 1 and sys.argv[1] == "dev":
         run_dev()
-    elif len(sys.argv) > 1 and sys.argv[1] == "granian":
-        run_granian()
-    elif len(sys.argv) > 1 and sys.argv[1] == "uvicorn":
-        run_uvicorn()
     else:
-        run_granian()
+        run_uvicorn()
