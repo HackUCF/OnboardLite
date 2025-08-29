@@ -60,6 +60,11 @@ class GoogleWalletManager:
         Returns:
             Pass object data dictionary ready for Google Wallet API
         """
+
+        # ensure first name and last name are not empty and discord username is not empty
+        if not user_data.first_name or not user_data.surname or not user_data.discord:
+            raise ValueError("User data is incomplete")
+
         user_id = str(user_data.id)
         full_name = f"{user_data.first_name} {user_data.surname}"
         discord_username = user_data.discord.username if user_data.discord else ""
@@ -156,7 +161,11 @@ class GoogleWalletManager:
                     raise ValueError(f"Failed to check existing object: {e}") from e
 
             # Create new object
-            new_object = self._create_pass_object_data(user_data)
+            try:
+                new_object = self._create_pass_object_data(user_data)
+            except ValueError as err:
+                logger.error(f"Failed to create Google Wallet object for user {user_id}: {err}")
+                raise ValueError(f"Failed to create object: {err}") from err
 
             self.client.genericobject().insert(body=new_object).execute()
             logger.info(f"Successfully created Google Wallet object {object_id}")

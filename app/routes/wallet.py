@@ -103,7 +103,6 @@ async def google_gen(
         save_url = google_wallet_manager.create_jwt_save_url(user_data)
 
         return RedirectResponse(save_url)
-
-    except Exception as e:
-        logger.error(f"Failed to generate Google Wallet pass: {e}")
+    except ValueError as err:
+        logger.error(f"Failed to generate Google Wallet pass: {err}")
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Failed to generate Google Wallet pass")
