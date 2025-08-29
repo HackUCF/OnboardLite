@@ -55,6 +55,7 @@ async def get_infra(
     current_admin: CurrentAdmin,
     member_id: Optional[uuid.UUID] = None,
     session: Session = Depends(get_session),
+    reset_password: bool = False,
 ):
     """
     API endpoint to FORCE-provision Infra credentials (even without membership!!!)
@@ -65,7 +66,7 @@ async def get_infra(
 
     user_data = session.exec(select(UserModel).where(UserModel.id == member_id)).one_or_none()
 
-    creds = Approve.provision_infra(member_id, user_data)
+    creds = Approve.provision_infra(member_id, user_data, reset_password=reset_password)
 
     if creds is None:
         creds = {}

@@ -29,7 +29,11 @@ class Approve:
     def __init__(self):
         pass
 
-    def provision_infra(member_id: uuid.UUID, user_data):
+    def provision_infra(
+        member_id: uuid.UUID,
+        user_data,
+        reset_password=False,
+    ):
         username = user_data.discord.username[:20].rstrip(".")
         password = HorsePass.gen()
         admin = KeycloakAdmin(
@@ -47,7 +51,11 @@ class Approve:
             raise
         if len(users) == 1:
             try:
-                admin.update_user(user_id=users[0].get("id"), payload={"enabled": True})
+                if reset_password:
+                    admin.set_user_password(user_id=users[0].get("id"), password=password, temporary=True)
+                    return {"username": users[0].get("username"), "password": password}
+                else:
+                    admin.update_user(user_id=users[0].get("id"), payload={"enabled": True})
                 logger.info(f"User {user_data.id} Keycloak user {users[0].get('id')} enabled")
             except Exception:
                 logger.exception(f"Keycloak Error - Failed to enable user {user_data.id} ")
