@@ -152,6 +152,9 @@
         <button class="btn" id="sendMessage">
           <i class="fa-brands fa-discord"></i> Send Discord Message
         </button>
+        <button class="btn" id="migrateDiscord">
+          <i class="fa-solid fa-exchange-alt"></i> Migrate Discord Account
+        </button>
       </details>
       <details>
         <summary><h2>Membership History</h2></summary>
@@ -169,6 +172,84 @@
       <button id="scannerOff" class="btn">Search Manually</button>
       <button id="changeCamera" class="btn">Change Camera</button>
       <video></video>
+    </div>
+  </div>
+
+  <!-- Discord Migration Modal -->
+  <div id="migrationModal" class="modal" style="display: none">
+    <div class="modal-content">
+      <span class="close" onclick="closeMigrationModal()">&times;</span>
+
+      <h2>⚠️ Discord Account Migration</h2>
+
+      <div class="security-warning">
+        <h3>🛡️ SECURITY VERIFICATION REQUIRED</h3>
+        <p>
+          <strong
+            >Before proceeding, you MUST verify the user's identity:</strong
+          >
+        </p>
+        <ul>
+          <li>✅ Verify via email confirmation</li>
+          <li>✅ Verify in person with UCF ID</li>
+          <li>✅ Confirm this is not identity theft</li>
+        </ul>
+        <p class="warning-text">
+          ⚠️ This action will permanently change the user's Discord association!
+        </p>
+      </div>
+
+      <form id="migrationForm">
+        <input type="hidden" id="migrationUserId" name="user_id" />
+
+        <div class="form-group">
+          <label for="newDiscordId">New Discord ID (Snowflake):</label>
+          <input
+            type="text"
+            id="newDiscordId"
+            name="new_discord_id"
+            placeholder="123456789012345678"
+            pattern="[0-9]{17,20}"
+            required
+          />
+          <small>Enter the Discord snowflake ID (17-20 digits)</small>
+        </div>
+
+        <div class="form-group">
+          <label>
+            <input type="checkbox" id="identityVerified" required />
+            I have verified the user's identity and confirmed this migration is
+            legitimate
+          </label>
+        </div>
+
+        <div class="form-actions">
+          <button
+            type="button"
+            onclick="checkDiscordAccount()"
+            class="btn btn-primary"
+          >
+            Check Discord Account
+          </button>
+          <button
+            type="submit"
+            id="migrationSubmit"
+            class="btn btn-danger"
+            disabled
+          >
+            Execute Migration
+          </button>
+          <button
+            type="button"
+            onclick="closeMigrationModal()"
+            class="btn btn-secondary"
+          >
+            Cancel
+          </button>
+        </div>
+      </form>
+
+      <div id="migrationResults"></div>
     </div>
   </div>
 </body>

@@ -402,3 +402,97 @@ async def restore_membership(
     )
 
     return result
+
+
+@router.post("/migrate_discord_account/")
+async def migrate_discord_account(
+    request: Request,
+    current_admin: CurrentAdmin,
+    old_user_id: uuid.UUID = Body(...),
+    new_discord_id: str = Body(...),
+    identity_verified: bool = Body(...),
+    session: Session = Depends(get_session),
+):
+    """
+    Execute Discord account migration with database transaction
+    """
+
+    if not identity_verified:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Identity verification is required")
+
+    # Validate Discord ID format
+    if not new_discord_id.isdigit() or len(new_discord_id) < 17 or len(new_discord_id) > 20:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid Discord ID format")
+
+    try:
+        # Start database transaction
+        with session.begin():
+            # 1. Get old user account
+            old_user = session.exec(select(UserModel).where(UserModel.id == old_user_id).options(selectinload(UserModel.discord))).one_or_none()
+
+            if not old_user:
+                raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Old user account not found")
+
+            # 2. Check if account exists with new Discord ID
+            new_user = session.exec(select(UserModel).where(UserModel.discord_id == new_discord_id).options(selectinload(UserModel.discord))).one_or_none()
+
+            if not new_user:
+                raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"No account found with Discord ID {new_discord_id}")
+
+            # 3. Prevent migrating to self
+            if old_user.discord_id == new_discord_id:
+                raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="User already has this Discord ID")
+
+            # 4. Store audit information for logging
+            old_discord_id = old_user.discord_id
+            admin_name = current_admin["name"]
+            old_user_name = f"{old_user.first_name} {old_user.surname}"
+            new_user_name = f"{new_user.first_name} {new_user.surname}"
+            new_user_id = new_user.id
+
+            # 5. Get references to models before deletion
+            old_discord_model = old_user.discord
+            new_discord_model = new_user.discord
+
+            # 6. Update old user with new Discord ID
+            old_user.discord_id = new_discord_id
+
+            # 7. Transfer new Discord model to old user
+            if new_discord_model:
+                new_discord_model.user_id = old_user.id
+                old_user.discord = new_discord_model
+
+            # 8. Delete old Discord model if it exists
+            if old_discord_model:
+                session.delete(old_discord_model)
+
+            # 9. Delete new (temporary) user model
+            if new_user.ethics_form:
+                session.delete(new_user.ethics_form)
+            session.delete(new_user)
+
+            # 10. Refresh old user to get updated data
+            session.refresh(old_user)
+
+        # Transaction completed successfully - log the migration
+        logger.info(
+            f"Discord migration completed by admin {admin_name} ({current_admin['id']}): "
+            f"User '{old_user_name}' ({old_user_id}) migrated from Discord {old_discord_id} to {new_discord_id}. "
+            f"Temporary account '{new_user_name}' ({new_user_id}) was deleted."
+        )
+
+        return {
+            "success": True,
+            "message": f"Successfully migrated user to Discord ID {new_discord_id}",
+            "old_discord_id": old_discord_id,
+            "new_discord_id": new_discord_id,
+            "user_id": str(old_user_id),
+            "new_discord_username": old_user.discord.username if old_user.discord else "Unknown",
+        }
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        session.rollback()
+        logger.exception(f"Discord migration failed for user {old_user_id}")
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"Migration failed: {str(e)}")

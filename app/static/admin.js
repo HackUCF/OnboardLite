@@ -282,6 +282,10 @@ function showUser(userId) {
     sendDiscordDM(user.id, message);
   };
 
+  document.getElementById("migrateDiscord").onclick = (evt) => {
+    openDiscordMigration(user.id);
+  };
+
   // Set page visibilities
   document.getElementById("users").style.display = "none";
   document.getElementById("scanner").style.display = "none";
@@ -518,3 +522,145 @@ window.onload = (evt) => {
     filter(true);
   };
 };
+
+// Discord Migration Functions
+function openDiscordMigration(userId) {
+  document.getElementById("migrationModal").style.display = "block";
+  document.getElementById("migrationUserId").value = userId;
+  document.getElementById("migrationResults").innerHTML = "";
+  document.getElementById("migrationSubmit").disabled = true;
+  document.getElementById("newDiscordId").value = "";
+  document.getElementById("identityVerified").checked = false;
+}
+
+function closeMigrationModal() {
+  document.getElementById("migrationModal").style.display = "none";
+}
+
+async function checkDiscordAccount() {
+  const discordId = document.getElementById("newDiscordId").value;
+  const resultsDiv = document.getElementById("migrationResults");
+
+  if (!discordId) {
+    alert("Please enter a Discord ID");
+    return;
+  }
+
+  // Validate Discord ID format
+  if (!/^[0-9]{17,20}$/.test(discordId)) {
+    resultsDiv.innerHTML = `
+      <div class="error">Invalid Discord ID format. Must be 17-20 digits.</div>
+    `;
+    document.getElementById("migrationSubmit").disabled = true;
+    return;
+  }
+
+  try {
+    const response = await fetch(
+      `/admin/get_by_snowflake/?discord_id=${discordId}`,
+    );
+
+    if (response.ok) {
+      const data = await response.json();
+      const user = data.data;
+
+      resultsDiv.innerHTML = `
+        <div class="account-found">
+          <h4>✅ Account Found</h4>
+          <p><strong>Discord Username:</strong> ${user.discord?.username || "Unknown"}</p>
+          <p><strong>Name:</strong> ${user.first_name || "Not set"} ${user.surname || ""}</p>
+          <p><strong>Email:</strong> ${user.email || "Not set"}</p>
+          <p><strong>Is Member:</strong> ${user.is_full_member ? "Yes" : "No"}</p>
+          <p><strong>Join Date:</strong> ${user.join_date || "Not set"}</p>
+          ${
+            !user.first_name || !user.surname || !user.email
+              ? '<p class="warning">⚠️ This appears to be a new/temporary account with minimal data</p>'
+              : '<p class="warning">⚠️ This account has significant data that will be lost</p>'
+          }
+        </div>
+      `;
+
+      // Enable migration button
+      document.getElementById("migrationSubmit").disabled = false;
+    } else {
+      resultsDiv.innerHTML = `
+        <div class="account-not-found">
+          <h4>❌ No Account Found</h4>
+          <p>No user account exists with Discord ID: ${discordId}</p>
+          <p>The user must create an account with this Discord ID first.</p>
+        </div>
+      `;
+
+      // Disable migration button
+      document.getElementById("migrationSubmit").disabled = true;
+    }
+  } catch (error) {
+    resultsDiv.innerHTML = `<div class="error">Error checking account: ${error.message}</div>`;
+    document.getElementById("migrationSubmit").disabled = true;
+  }
+}
+
+// Add event listener for migration form
+document.addEventListener("DOMContentLoaded", function () {
+  const migrationForm = document.getElementById("migrationForm");
+  if (migrationForm) {
+    migrationForm.addEventListener("submit", async function (e) {
+      e.preventDefault();
+
+      const formData = new FormData(e.target);
+      const data = {
+        old_user_id: formData.get("user_id"),
+        new_discord_id: formData.get("new_discord_id"),
+        identity_verified: document.getElementById("identityVerified").checked,
+      };
+
+      if (!data.identity_verified) {
+        alert("You must verify the user's identity before proceeding");
+        return;
+      }
+
+      if (
+        !confirm(
+          "Are you sure you want to execute this migration? This action cannot be undone.",
+        )
+      ) {
+        return;
+      }
+
+      try {
+        const response = await fetch("/admin/migrate_discord_account/", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(data),
+        });
+
+        const result = await response.json();
+
+        if (response.ok && result.success) {
+          document.getElementById("migrationResults").innerHTML = `
+            <div class="success">
+              <h4>✅ Migration Successful</h4>
+              <p>${result.message}</p>
+              <p><strong>Old Discord ID:</strong> ${result.old_discord_id}</p>
+              <p><strong>New Discord ID:</strong> ${result.new_discord_id}</p>
+              <p><strong>New Username:</strong> ${result.new_discord_username}</p>
+            </div>
+          `;
+
+          // Refresh the user data after a delay
+          setTimeout(() => {
+            closeMigrationModal();
+            showUser(data.old_user_id);
+          }, 3000);
+        } else {
+          throw new Error(
+            result.detail || result.message || "Migration failed",
+          );
+        }
+      } catch (error) {
+        document.getElementById("migrationResults").innerHTML =
+          `<div class="error">Migration failed: ${error.message}</div>`;
+      }
+    });
+  }
+});
