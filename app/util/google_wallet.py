@@ -60,13 +60,22 @@ class GoogleWalletManager:
         Returns:
             Pass object data dictionary ready for Google Wallet API
         """
+        # ensure first name and discord username are not empty (surname is optional)
+        missing_fields = []
+        if not user_data.first_name:
+            missing_fields.append("first_name")
+        if not user_data.discord or not user_data.discord.username:
+            missing_fields.append("discord.username")
 
-        # ensure first name and last name are not empty and discord username is not empty
-        if not user_data.first_name or not user_data.surname or not user_data.discord:
+        if missing_fields:
+            logger.error(f"User data is incomplete. Missing fields: {', '.join(missing_fields)}")
             raise ValueError("User data is incomplete")
 
         user_id = str(user_data.id)
-        full_name = f"{user_data.first_name} {user_data.surname}"
+        # After validation, we know first_name is not None/empty
+        full_name = str(user_data.first_name)
+        if user_data.surname:
+            full_name += f" {user_data.surname}"
         discord_username = user_data.discord.username if user_data.discord else ""
 
         return {
