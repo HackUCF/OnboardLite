@@ -428,13 +428,28 @@ async def migrate_discord_account(
         # Start database transaction
         with session.begin():
             # 1. Get old user account
-            old_user = session.exec(select(UserModel).where(UserModel.id == old_user_id).options(selectinload(UserModel.discord))).one_or_none()
+            old_user = session.exec(
+                select(UserModel)
+                .where(UserModel.id == old_user_id)
+                .options(
+                    selectinload(UserModel.discord),
+                    selectinload(UserModel.membership_history),
+                )
+            ).one_or_none()
 
             if not old_user:
                 raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Old user account not found")
 
             # 2. Check if account exists with new Discord ID
-            new_user = session.exec(select(UserModel).where(UserModel.discord_id == new_discord_id).options(selectinload(UserModel.discord))).one_or_none()
+            new_user = session.exec(
+                select(UserModel)
+                .where(UserModel.discord_id == new_discord_id)
+                .options(
+                    selectinload(UserModel.discord),
+                    selectinload(UserModel.ethics_form),
+                    selectinload(UserModel.membership_history),
+                )
+            ).one_or_none()
 
             if not new_user:
                 raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"No account found with Discord ID {new_discord_id}")
@@ -450,29 +465,38 @@ async def migrate_discord_account(
             new_user_name = f"{new_user.first_name} {new_user.surname}"
             new_user_id = new_user.id
 
-            # 5. Get references to models before deletion
-            old_discord_model = old_user.discord
-            new_discord_model = new_user.discord
+            # 5. Two-phase migration: delete temp user & flush, then reassign discord_id
+            with session.no_autoflush:
+                old_discord_model = old_user.discord
+                new_discord_model = new_user.discord
 
-            # 6. Update old user with new Discord ID
-            old_user.discord_id = new_discord_id
+                # Validate Case A invariant: both users must have discord models
+                if not old_discord_model or not new_discord_model:
+                    raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Invariant violation: both source and target users must have discord profiles (Case A).")
 
-            # 7. Transfer new Discord model to old user
-            if new_discord_model:
-                new_discord_model.user_id = old_user.id
-                old_user.discord = new_discord_model
+                # Delete temp user's membership history (never preserve transient account history)
+                if new_user.membership_history:
+                    for mh in new_user.membership_history:
+                        session.delete(mh)
 
-            # 8. Delete old Discord model if it exists
-            if old_discord_model:
-                session.delete(old_discord_model)
+                # Remove ethics form (transient)
+                if new_user.ethics_form:
+                    session.delete(new_user.ethics_form)
 
-            # 9. Delete new (temporary) user model
-            if new_user.ethics_form:
-                session.delete(new_user.ethics_form)
-            session.delete(new_user)
+                # Merge new discord model fields into old discord model
+                for attr in ["email", "mfa", "avatar", "banner", "color", "nitro", "locale", "username"]:
+                    setattr(old_discord_model, attr, getattr(new_discord_model, attr))
 
-            # 10. Refresh old user to get updated data
-            session.refresh(old_user)
+                # Delete the new (now merged) discord model and the temp user
+                session.delete(new_discord_model)
+                session.delete(new_user)
+                session.flush()
+
+                # Update old user's discord_id AFTER freeing it from temp account
+                old_user.discord_id = new_discord_id
+
+                session.flush()
+                session.refresh(old_user)
 
         # Transaction completed successfully - log the migration
         logger.info(

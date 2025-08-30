@@ -21,7 +21,7 @@ class DiscordModel(SQLModel, table=True):
     locale: Optional[str]
     username: str
 
-    user_id: Optional[uuid.UUID] = Field(default=None, foreign_key="usermodel.id")
+    user_id: Optional[uuid.UUID] = Field(default=None, foreign_key="usermodel.id", unique=True)
     user: "UserModel" = Relationship(back_populates="discord")
 
 
