@@ -5,253 +5,280 @@
 
 <!-- QR library -->
 <script src="/static/lib/qr-scanner.umd.min.js"></script>
+<style>
+  /* Ensure modal sits on top of page content and is centered */
+  .modal {
+    display: none;
+    position: fixed;
+    z-index: 5000;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    padding: 40px 10px;
+    background: rgba(0, 0, 0, 0.65);
+    backdrop-filter: blur(2px);
+  }
+  .modal-content {
+    margin: auto;
+    max-height: 85vh;
+    overflow-y: auto;
+    box-shadow: 0 0 25px rgba(0, 0, 0, 0.6);
+  }
+  .modal-content h2 {
+    margin-top: 0;
+  }
+  @media (max-width: 640px) {
+    .modal {
+      padding: 20px 5px;
+    }
+    .modal-content {
+      width: 100%;
+    }
+  }
+</style>
 {% endblock %} {% block content %}
-<body>
-  <div class="nav">
-    <div class="nav_inner">
-      <img src="/static/admin_logo.svg" />
-      <div class="right">Signed in as @{{name}}</div>
-    </div>
+<div class="nav">
+  <div class="nav_inner">
+    <img src="/static/admin_logo.svg" />
+    <div class="right">Signed in as @{{name}}</div>
   </div>
-  <div class="admin">
-    <div id="users">
-      <input type="text" class="search" placeholder="Search" />
-      <button id="activeFilter" class="btn searchbtn">All Status</button>
-      <button id="scannerOn" class="btn searchbtn">Scanner</button>
-      <table class="admin_main_table">
-        <thead></thead>
-        <tbody class="list"></tbody>
-      </table>
-    </div>
-    <div class="hide_default" id="user">
-      <div><button id="goBackBtn" class="btn searchbtn">Back</button></div>
-      <img id="pfp" />
-      <h1 id="name"></h1>
-      <h2 id="discord"></h2>
-      <br />
-      <table class="data_table">
-        <tbody>
-          <tr>
-            <td><h2 id="statusColor">Statuses</h2></td>
-          </tr>
-          <tr>
-            <td>Membership Status</td>
-            <td id="status">Value</td>
-          </tr>
-          <tr>
-            <td>Was Dues Paid?</td>
-            <td id="did_pay_dues">Value</td>
-          </tr>
-          <tr>
-            <td>Ethics Form Completion</td>
-            <td id="ethics_form">Value</td>
-          </tr>
-          <tr>
-            <td>Is Dues-Paying Member?</td>
-            <td id="is_full_member">Value</td>
-          </tr>
-          <tr>
-            <td>T-Shirt Status</td>
-            <td id="shirt_status">Value</td>
-          </tr>
-          <tr>
-            <td><h2>Identifiers</h2></td>
-          </tr>
-          <tr>
-            <td>Hack@UCF ID</td>
-            <td id="id">Value</td>
-          </tr>
-          <tr>
-            <td>NID</td>
-            <td id="nid">Value</td>
-          </tr>
-          <tr>
-            <td>UCF ID</td>
-            <td id="ucfid">Value</td>
-          </tr>
-          <tr>
-            <td>Preferred Email</td>
-            <td id="email">Value</td>
-          </tr>
-          <tr>
-            <td>Minecraft Username</td>
-            <td id="minecraft">Value</td>
-          </tr>
-          <tr>
-            <td>GitHub Username</td>
-            <td id="github">Value</td>
-          </tr>
-          <tr>
-            <td>Phone Number</td>
-            <td id="phone_number">Value</td>
-          </tr>
-          <tr>
-            <td><h2>Demography</h2></td>
-          </tr>
-          <tr>
-            <td>Class Standing</td>
-            <td id="class_standing">Value</td>
-          </tr>
-          <tr>
-            <td>Experience (out of 5)</td>
-            <td id="experience">Value</td>
-          </tr>
-          <tr>
-            <td>Meeting Interest</td>
-            <td id="attending">Value</td>
-          </tr>
-          <tr>
-            <td>Topic Interest</td>
-            <td id="curiosity">Value</td>
-          </tr>
-          <tr>
-            <td>Major</td>
-            <td id="major">Value</td>
-          </tr>
-          <tr>
-            <td>Gender</td>
-            <td id="gender">Value</td>
-          </tr>
-          <tr>
-            <td>Interested in C3?</td>
-            <td id="c3_interest">Value</td>
-          </tr>
-          <tr>
-            <td>Returning Member?</td>
-            <td id="is_returning">Value</td>
-          </tr>
-          <tr>
-            <td>Comments</td>
-            <td id="comments">Value</td>
-          </tr>
-        </tbody>
-      </table>
-      <details>
-        <summary><h2>Actions</h2></summary>
-        <button class="hide_default btn" id="payDues">
-          <i class="fa-solid fa-dollar"></i> Pay Dues
-        </button>
-        <button class="hide_default btn" id="reverify">
-          <i class="fa-solid fa-refresh"></i> Refresh Status
-        </button>
-        <button class="hide_default btn" id="claimShirt">
-          <i class="fa-solid fa-shirt"></i> Claim T-Shirt
-        </button>
-        <button class="btn" id="setAdmin">
-          <i class="fa-solid fa-lock"></i>
-          <span id="adminLabel">Toggle Admin</span>
-        </button>
-        <button class="btn" id="joinInfra">
-          <i class="fa-solid fa-server"></i>
-          <span id="infraLabel">Invite to Infra</span>
-        </button>
-        <button class="btn" id="infraReset">
-          <i class="fa-solid fa-server"></i>
-          <span id="infraResetLabel">Reset Infra Password</span>
-        </button>
-        <button class="btn" id="sendMessage">
-          <i class="fa-brands fa-discord"></i> Send Discord Message
-        </button>
-        <button class="btn" id="migrateDiscord">
-          <i class="fa-solid fa-exchange-alt"></i> Migrate Discord Account
-        </button>
-      </details>
-      <details>
-        <summary><h2>Membership History</h2></summary>
-        <div id="membership_history">
-          <p>Loading membership history...</p>
-        </div>
-      </details>
-      <details>
-        <summary><h2>View as JSON</h2></summary>
-        <pre id="user_json"></pre>
-      </details>
-    </div>
-    <div class="hide_default" id="scanner">
-      <h2>Present Hack@UCF ID Below</h2>
-      <button id="scannerOff" class="btn">Search Manually</button>
-      <button id="changeCamera" class="btn">Change Camera</button>
-      <video></video>
-    </div>
+</div>
+<div class="admin">
+  <div id="users">
+    <input type="text" class="search" placeholder="Search" />
+    <button id="activeFilter" class="btn searchbtn">All Status</button>
+    <button id="scannerOn" class="btn searchbtn">Scanner</button>
+    <table class="admin_main_table">
+      <thead></thead>
+      <tbody class="list"></tbody>
+    </table>
   </div>
+  <div class="hide_default" id="user">
+    <div><button id="goBackBtn" class="btn searchbtn">Back</button></div>
+    <img id="pfp" />
+    <h1 id="name"></h1>
+    <h2 id="discord"></h2>
+    <br />
+    <table class="data_table">
+      <tbody>
+        <tr>
+          <td><h2 id="statusColor">Statuses</h2></td>
+        </tr>
+        <tr>
+          <td>Membership Status</td>
+          <td id="status">Value</td>
+        </tr>
+        <tr>
+          <td>Was Dues Paid?</td>
+          <td id="did_pay_dues">Value</td>
+        </tr>
+        <tr>
+          <td>Ethics Form Completion</td>
+          <td id="ethics_form">Value</td>
+        </tr>
+        <tr>
+          <td>Is Dues-Paying Member?</td>
+          <td id="is_full_member">Value</td>
+        </tr>
+        <tr>
+          <td>T-Shirt Status</td>
+          <td id="shirt_status">Value</td>
+        </tr>
+        <tr>
+          <td><h2>Identifiers</h2></td>
+        </tr>
+        <tr>
+          <td>Hack@UCF ID</td>
+          <td id="id">Value</td>
+        </tr>
+        <tr>
+          <td>NID</td>
+          <td id="nid">Value</td>
+        </tr>
+        <tr>
+          <td>UCF ID</td>
+          <td id="ucfid">Value</td>
+        </tr>
+        <tr>
+          <td>Preferred Email</td>
+          <td id="email">Value</td>
+        </tr>
+        <tr>
+          <td>Minecraft Username</td>
+          <td id="minecraft">Value</td>
+        </tr>
+        <tr>
+          <td>GitHub Username</td>
+          <td id="github">Value</td>
+        </tr>
+        <tr>
+          <td>Phone Number</td>
+          <td id="phone_number">Value</td>
+        </tr>
+        <tr>
+          <td><h2>Demography</h2></td>
+        </tr>
+        <tr>
+          <td>Class Standing</td>
+          <td id="class_standing">Value</td>
+        </tr>
+        <tr>
+          <td>Experience (out of 5)</td>
+          <td id="experience">Value</td>
+        </tr>
+        <tr>
+          <td>Meeting Interest</td>
+          <td id="attending">Value</td>
+        </tr>
+        <tr>
+          <td>Topic Interest</td>
+          <td id="curiosity">Value</td>
+        </tr>
+        <tr>
+          <td>Major</td>
+          <td id="major">Value</td>
+        </tr>
+        <tr>
+          <td>Gender</td>
+          <td id="gender">Value</td>
+        </tr>
+        <tr>
+          <td>Interested in C3?</td>
+          <td id="c3_interest">Value</td>
+        </tr>
+        <tr>
+          <td>Returning Member?</td>
+          <td id="is_returning">Value</td>
+        </tr>
+        <tr>
+          <td>Comments</td>
+          <td id="comments">Value</td>
+        </tr>
+      </tbody>
+    </table>
+    <details>
+      <summary><h2>Actions</h2></summary>
+      <button class="hide_default btn" id="payDues">
+        <i class="fa-solid fa-dollar"></i> Pay Dues
+      </button>
+      <button class="hide_default btn" id="reverify">
+        <i class="fa-solid fa-refresh"></i> Refresh Status
+      </button>
+      <button class="hide_default btn" id="claimShirt">
+        <i class="fa-solid fa-shirt"></i> Claim T-Shirt
+      </button>
+      <button class="btn" id="setAdmin">
+        <i class="fa-solid fa-lock"></i>
+        <span id="adminLabel">Toggle Admin</span>
+      </button>
+      <button class="btn" id="joinInfra">
+        <i class="fa-solid fa-server"></i>
+        <span id="infraLabel">Invite to Infra</span>
+      </button>
+      <button class="btn" id="infraReset">
+        <i class="fa-solid fa-server"></i>
+        <span id="infraResetLabel">Reset Infra Password</span>
+      </button>
+      <button class="btn" id="sendMessage">
+        <i class="fa-brands fa-discord"></i> Send Discord Message
+      </button>
+      <button class="btn" id="migrateDiscord">
+        <i class="fa-solid fa-exchange-alt"></i> Migrate Discord Account
+      </button>
+    </details>
+    <details>
+      <summary><h2>Membership History</h2></summary>
+      <div id="membership_history">
+        <p>Loading membership history...</p>
+      </div>
+    </details>
+    <details>
+      <summary><h2>View as JSON</h2></summary>
+      <pre id="user_json"></pre>
+    </details>
+  </div>
+  <div class="hide_default" id="scanner">
+    <h2>Present Hack@UCF ID Below</h2>
+    <button id="scannerOff" class="btn">Search Manually</button>
+    <button id="changeCamera" class="btn">Change Camera</button>
+    <video></video>
+  </div>
+</div>
 
-  <!-- Discord Migration Modal -->
-  <div id="migrationModal" class="modal" style="display: none">
-    <div class="modal-content">
-      <span class="close" onclick="closeMigrationModal()">&times;</span>
+<!-- Discord Migration Modal -->
+<div id="migrationModal" class="modal">
+  <div class="modal-content">
+    <span class="close" onclick="closeMigrationModal()">&times;</span>
 
-      <h2>⚠️ Discord Account Migration</h2>
+    <h2>⚠️ Discord Account Migration</h2>
 
-      <div class="security-warning">
-        <h3>🛡️ SECURITY VERIFICATION REQUIRED</h3>
-        <p>
-          <strong
-            >Before proceeding, you MUST verify the user's identity:</strong
-          >
-        </p>
-        <ul>
-          <li>✅ Verify via email confirmation</li>
-          <li>✅ Verify in person with UCF ID</li>
-          <li>✅ Confirm this is not identity theft</li>
-        </ul>
-        <p class="warning-text">
-          ⚠️ This action will permanently change the user's Discord association!
-        </p>
+    <div class="security-warning">
+      <h3>🛡️ SECURITY VERIFICATION REQUIRED</h3>
+      <p>
+        <strong>Before proceeding, you MUST verify the user's identity:</strong>
+      </p>
+      <ul>
+        <li>✅ Verify via email confirmation</li>
+        <li>✅ Verify in person with UCF ID</li>
+        <li>✅ Confirm this is not identity theft</li>
+      </ul>
+      <p class="warning-text">
+        ⚠️ This action will permanently change the user's Discord association!
+      </p>
+    </div>
+
+    <form id="migrationForm">
+      <input type="hidden" id="migrationUserId" name="user_id" />
+
+      <div class="form-group">
+        <label for="newDiscordId">New Discord ID (Snowflake):</label>
+        <input
+          type="text"
+          id="newDiscordId"
+          name="new_discord_id"
+          placeholder="123456789012345678"
+          pattern="[0-9]{17,20}"
+          required
+        />
+        <small>Enter the Discord snowflake ID (17-20 digits)</small>
       </div>
 
-      <form id="migrationForm">
-        <input type="hidden" id="migrationUserId" name="user_id" />
+      <div class="form-group">
+        <label>
+          <input type="checkbox" id="identityVerified" required />
+          I have verified the user's identity and confirmed this migration is
+          legitimate
+        </label>
+      </div>
 
-        <div class="form-group">
-          <label for="newDiscordId">New Discord ID (Snowflake):</label>
-          <input
-            type="text"
-            id="newDiscordId"
-            name="new_discord_id"
-            placeholder="123456789012345678"
-            pattern="[0-9]{17,20}"
-            required
-          />
-          <small>Enter the Discord snowflake ID (17-20 digits)</small>
-        </div>
+      <div class="form-actions">
+        <button
+          type="button"
+          onclick="checkDiscordAccount()"
+          class="btn btn-primary"
+        >
+          Check Discord Account
+        </button>
+        <button
+          type="submit"
+          id="migrationSubmit"
+          class="btn btn-danger"
+          disabled
+        >
+          Execute Migration
+        </button>
+        <button
+          type="button"
+          onclick="closeMigrationModal()"
+          class="btn btn-secondary"
+        >
+          Cancel
+        </button>
+      </div>
+    </form>
 
-        <div class="form-group">
-          <label>
-            <input type="checkbox" id="identityVerified" required />
-            I have verified the user's identity and confirmed this migration is
-            legitimate
-          </label>
-        </div>
-
-        <div class="form-actions">
-          <button
-            type="button"
-            onclick="checkDiscordAccount()"
-            class="btn btn-primary"
-          >
-            Check Discord Account
-          </button>
-          <button
-            type="submit"
-            id="migrationSubmit"
-            class="btn btn-danger"
-            disabled
-          >
-            Execute Migration
-          </button>
-          <button
-            type="button"
-            onclick="closeMigrationModal()"
-            class="btn btn-secondary"
-          >
-            Cancel
-          </button>
-        </div>
-      </form>
-
-      <div id="migrationResults"></div>
-    </div>
+    <div id="migrationResults"></div>
   </div>
-</body>
+</div>
 <script type="text/javascript" src="/static/admin.js"></script>
 {% endblock %}
