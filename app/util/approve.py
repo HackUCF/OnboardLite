@@ -34,15 +34,17 @@ class Approve:
     def sanitize_username(username: str) -> str:
         """Strip invalid characters from username"""
         # Remove characters: <>& "' spaces tabs vertical tabs $%!#?§,;:*~/\|^=[]{}()`
-        invalid_chars = r"[<>&\"'\\s\\v\\h$%!#?§,;:*~/\\|^=\[\]{}()`]"
+        invalid_chars = r"[<>&\"'\s\v\t$%!#?§,;:*~/\\|^=\[\]{}()`]"
         return re.sub(invalid_chars, "", username)
 
     @staticmethod
     def sanitize_name(name: str) -> str:
         """Strip invalid characters from first and last names"""
-        # Remove characters: <>& " vertical tabs $%!#?§;*~/\|^=[]{}()
+        # Remove dangerous characters but keep common name chars like hyphens, apostrophes, spaces
         invalid_chars = r"[<>&\"\v$%!#?§;*~/\\|^=\[\]{}()]"
-        return re.sub(invalid_chars, "", name)
+        result = re.sub(invalid_chars, "", name)
+        logger.debug(f"sanitize_name: '{name}' -> '{result}'")
+        return result
 
     def provision_infra(
         member_id: uuid.UUID,
