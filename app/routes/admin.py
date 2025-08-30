@@ -517,6 +517,5 @@ async def migrate_discord_account(
     except HTTPException:
         raise
     except Exception as e:
-        session.rollback()
         logger.exception(f"Discord migration failed for user {old_user_id}")
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"Migration failed: {str(e)}")
