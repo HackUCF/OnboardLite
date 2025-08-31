@@ -22,7 +22,7 @@ dependencies = [
     "requests-oauthlib==2.0.0",
     "sentry-sdk~=2.35.1",
     "sqlmodel==0.0.24",
-    "stripe==12.4.0",
+    "stripe==12.5.0",
     "typing-extensions~=4.15.0",
     "uvicorn>=0.35.0",
 ]
