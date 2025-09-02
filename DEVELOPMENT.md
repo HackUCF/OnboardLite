@@ -24,8 +24,8 @@ This guide will help you set up OnboardLite for local development.
 
 3. **Install dependencies**
    ```bash
-   python3 -m pip install -r requirements.txt
-   python3 -m pip install -r requirements-dev.txt
+   python3 -m pip install -e .
+   python3 -m pip install -e .[dev]
    pre-commit install
    ```
 
@@ -176,7 +176,56 @@ To edit questions on forms, modify the JSON files in the `forms/` folder. Each J
 
 OnboardLite uses a file format based on a simplified [Sileo Native Depiction](https://developer.getsileo.app/native-depictions). The schema is rendered by `util/kennelish.py`.
 
-**Important**: Database entries must be defined in `models/user.py` before being called in a form. Data type validation is enforced by Pydantic.
+### Form Structure
+
+Each form is defined as a JSON array where each object represents a discrete UI element. Here's an example structure:
+
+```json
+[
+    {
+        "type": "text_input",
+        "label": "Full Name",
+        "key": "full_name",
+        "required": true
+    },
+    {
+        "type": "email_input", 
+        "label": "Email Address",
+        "key": "email",
+        "required": true
+    }
+]
+```
+
+### Adding New Form Fields
+
+1. **Define the field in the database model**: Database entries must be defined in `models/user.py` before being used in a form
+2. **Add the field to the form JSON**: Update the appropriate JSON file in the `forms/` directory
+3. **Test the form**: Verify the field appears and validates correctly
+
+### Data Validation
+
+Data type validation is enforced by Pydantic models defined in `models/user.py`. Make sure your form fields match the expected data types in the model.
+
+### Available Form Types
+
+The form system supports various input types (check `util/kennelish.py` for the complete list):
+- Text inputs
+- Email inputs  
+- Number inputs
+- Date inputs
+- Dropdown selects
+- Checkboxes
+- Radio buttons
+- And more...
+
+## Administrative Features
+
+### Sudo Mode
+
+Administrators are classified as trusted Operations members and are *not* the same thing as Executives. These are people who can view roster logs, and should be FERPA-trained by UCF (either using the RSO training or the general TA training). 
+
+The initial administrator has to be set via the database interface (DynamoDB in production, or SQLite in development).
 
 ## Development Tips
 

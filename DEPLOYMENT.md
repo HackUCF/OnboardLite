@@ -74,7 +74,7 @@ python3.11 get-pip.py
 
 2. **Install Python dependencies**:
    ```bash
-   python3.11 -m pip install -r requirements.txt
+   python3.11 -m pip install -e .
    ```
 
 3. **Configure the application**:
