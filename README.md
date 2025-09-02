@@ -1,151 +1,146 @@
 # OnboardLite
 
-OnboardLite is the result of the Influx Initiative, our vision for an improved student organization lifecycle at the University of Central Florida
+> **Streamlining student organization lifecycle management at the University of Central Florida**
 
+OnboardLite is a modern web application designed to revolutionize how student organizations manage their membership lifecycle at UCF. Born from the Influx Initiative, it provides a comprehensive platform for student onboarding, membership management, and organizational administration.
 
+## What is OnboardLite?
 
-## Local Dev
-```
-git clone https://github.com/HackUCF/OnboardLite.git
-python3 -m venv .venv
-echo ".venv/" > ./.git/info/exclude
-source ./.venv/bin/activate
-python3 -m pip install -r requirements.txt
-python3 -m pip install -r requirements-dev.txt
-pre-commit install
-mkdir ./config
-cp options-example.yml ./config/options.yml
-```
-Goto https://discord.com/developers/applications create an application. Then under oauth2 get client id and client sceret set redir url to ``http://localhost:8000/api/oauth/?redir=_redir``
-Set
-```
-discord
-   client_id:
-   secret:
-   redirect_base: http://localhost:8000/api/oauth/?redir=
-   enable: false
-```
-set
-```
-email:
-    enable false
-```
-Set
-```
-http:
-    domain:  localhost:8000
-```
-Set jwt secret to a <32 charcter random string
+OnboardLite addresses the common challenges faced by student organizations when managing their members:
 
-Set database to
-```
-database:
-    url: "sqlite:////data/database.db"  # For docker create database/
-    url: "sqlite:///database/database.db" # For local dev create database/
-```
-To run you can do either
+- **Complex onboarding processes** that involve multiple systems and manual steps
+- **Fragmented member data** spread across different platforms
+- **Payment processing difficulties** for dues and event fees
+- **Administrative overhead** in managing ethics forms, approvals, and documentation
+- **Integration challenges** between Discord, payment systems, and membership databases
 
-``python3 -m uvicorn app.main:app --host 0.0.0.0 --reload --port 8000``
+## Key Features
 
-or
+### 🚀 **Streamlined Onboarding**
+- Digital forms with smart validation
+- Automated approval workflows
+- Integration with UCF systems
+- Real-time status tracking
 
-``docker compose -f docker-compose-dev.yml watch``
+### 👥 **Discord Integration**
+- Seamless Discord authentication
+- Automatic role assignment
+- Member verification through Discord
+- Community management tools
 
-Debug in  vscode create ``.vscode/launch.json``
-```
-{
-    "version": "0.2.0",
-    "configurations": [
+### 💳 **Payment Processing**
+- Stripe integration for membership dues
+- Automated payment tracking
+- Receipt generation
+- Financial reporting
 
-        {
-            "name": "Python: FastAPI",
-            "type": "debugpy",
-            "justMyCode": true,
-            "request": "launch",
-            "module": "uvicorn",
-            "args": [
-                "app.main:app",
-                "--reload",
-                "--port",
-                "8000"
-            ]
-        }
+### 📋 **Ethics & Compliance**
+- Digital ethics forms
+- FERPA-compliant data handling
+- Audit trails for compliance
+- Automated reminders
 
-    ]
-}
-```
+### 🔐 **Security & Privacy**
+- JWT-based authentication
+- Role-based access control
+- Secure data encryption
+- Privacy-first design
 
-## Deploying
+### 📱 **Apple Wallet Integration**
+- Digital membership cards
+- Event tickets
+- QR code verification
+- Mobile-first experience
 
-1. Deploy a box.
-2. Make sure the AWS CLI is set up and that `~/.aws` is populated.
-- Create a new AWS user with the policies `AmazonDynamoDBFullAccess` and `PowerUserAccess` (or preferrably, a policy that includes the actions `dynamodb:*` and `sso:account:access`)
-- [Install the AWS CLI](https://docs.aws.amazon.com/cli/latest/userguide/getting-started-install.html)
-- Run `aws configure sso` on the host machine. See [this article](https://docs.aws.amazon.com/cli/latest/userguide/sso-configure-profile-token.html) for more details.
-- Create a new DynamoDB table named "hackucf_members" (default) with partition key `id`
-3. Make sure Stripe is configured to work with a webhook at `$URL/pay/webhook/validate` and the account is activated.
-- Create the webhook at the desired domain. Include the events `checkout.session.*`.
-- Create a product to represent dues payments in the dashboard. This should be $10 + $0.60 to account for Stripe fees.
-4. Request a configuration file with all the neccesary secrets/configurations for AWS, Stripe, Discord, and others.
-5. Install dependencies: `sudo apt install -y nginx certbot build-essential python3.11 python3.11-dev` (or later versions of python3). You may need to use [get-pip.py](https://bootstrap.pypa.io/get-pip.py) to install `pip3.11` as well.
-6. Install Python dependencies: `python3.11 -m pip install -r requirements.txt`
-7. Configure `nginx` (recommended) to proxy to port 80/443 + enable HTTPS. Set headers like `Content-Security-Policy`.
-- If you use nginx, PLEASE use HTTPS (if you can; Cloudflare will probably disagree and want to use its own cert).
-8. Install redis ``sudo apt install redis``
-9. Drop the following `systemd` service, replacing values as appropiate:
-```conf
-[Unit]
-Description=Uvicorn instance to serve OnboardLite
-After=network.target
+### 🛡️ **Administrative Tools**
+- Member roster management
+- Analytics and reporting
+- Bulk operations
+- Administrative oversight
 
-[Service]
-User=ubuntu
-Group=www-data
-WorkingDirectory=/home/onboard-user/OnboardLite/
-Environment="PATH=/home/onboard-user/OnboardLite/"
-ExecStart=python3.11 -m uvicorn index:app --host 127.0.0.1 --port 8000 --workers 2
+## Who Uses OnboardLite?
 
-[Install]
-WantedBy=multi-user.target
-```
-10. Drop the following nginx site config:
-```conf
-server {
-        listen 80;
-        listen [::]:80;
+### For Student Organizations
+- **Membership coordinators** can streamline the onboarding process
+- **Treasurers** can manage dues and payments efficiently
+- **Presidents and officers** get comprehensive member oversight
+- **Event organizers** can manage registrations and tickets
 
-        server_name join.hackucf.org;
+### For Members
+- **New students** experience a smooth joining process
+- **Existing members** can update their information easily
+- **Active members** receive digital membership cards and event tickets
 
-        proxy_set_header X-Forwarded-For $proxy_protocol_addr; # To forward the original client's IP address
-        proxy_set_header X-Forwarded-Proto $scheme; # to forward the  original protocol (HTTP or HTTPS)
-        proxy_set_header Host $host; # to forward the original host requested by the client
+### For UCF Administration
+- **Compliance officers** can ensure FERPA and ethics requirements are met
+- **Student Affairs** can monitor organization health and membership
 
-        root /var/www/html;
-        index index.html;
+## Technology Stack
 
-        location ^~ / {
-                proxy_pass http://127.0.0.1:8000;
-        }
-}
-```
-11. Start and enable the service using `systemctl`. Do the same for `nginx` if installed.
-12. Put the service behind Cloudflare (optional).
-13. Generate the Apple Wallet secrets and place them in `config/pki`. See [this tutorial](https://github.com/alexandercerutti/passkit-generator/wiki/Generating-Certificates) for details.
-14. Profit!
+OnboardLite is built with modern, reliable technologies:
 
-## Editing Form Data
+- **Backend**: FastAPI (Python) for high-performance API development
+- **Database**: SQLModel with SQLite/PostgreSQL support
+- **Authentication**: JWT tokens with Discord OAuth2 integration
+- **Payments**: Stripe for secure payment processing
+- **UI**: Server-side rendered templates with modern web standards
+- **Infrastructure**: Docker containers with cloud-ready deployment
 
-To edit questions on a form, edit the JSON files in the `forms/` folder. Each JSON is a separate page that acts as a discrete form, with each value correlated to a database entry. OnboardLite uses a file format based on a simplified [Sileo Native Depiction](https://developer.getsileo.app/native-depictions) and achieves the same goal: render a UI from a JSON schema. The schema is, honestly, poorly documented, but is rendered by `util/kennelish.py`. In short, each object in an array is a discrete element that is rendered.
+## Getting Started
 
-Database entries must be defined in `models/user.py` before being called in a form. Data type valdiation is enforced by Pydantic.
+### For Developers
+Ready to contribute or set up your own instance? Check out our [Development Guide](DEVELOPMENT.md) for detailed setup instructions.
 
-## Sudo Mode
+### For Deployment
+Planning to deploy OnboardLite for your organization? See our [Deployment Guide](DEPLOYMENT.md) for comprehensive deployment instructions.
 
-Administrators are classified as trusted Operations members and are *not* the same thing as Executives. These are people who can view roster logs, and should be FERPA-trained by UCF (either using the RSO training or the general TA training). The initial administrator has to be set via DynamoDB's user interface.
+### For Organizations
+Interested in using OnboardLite for your student organization? Contact the HackUCF team or check the existing deployment at your university.
 
-## Security Concerns
+## Project Status
 
-Please report security vulnerabilities to `execs@hackucf.org`.
+OnboardLite is actively developed and maintained by the HackUCF team. It's currently used in production for managing UCF student organization memberships.
 
+### Recent Updates
+- ✅ Modern FastAPI-based architecture
+- ✅ Discord integration for seamless authentication
+- ✅ Stripe payment processing
+- ✅ Digital ethics forms
+- ✅ Apple Wallet integration
+- ✅ Comprehensive admin dashboard
 
+### Roadmap
+- 🔄 Enhanced reporting and analytics
+- 🔄 Mobile app development
+- 🔄 Integration with additional UCF systems
+- 🔄 Advanced automation features
 
+## Contributing
+
+We welcome contributions from the community! Whether you're fixing bugs, adding features, or improving documentation, your help is appreciated.
+
+1. Check out our [Development Guide](DEVELOPMENT.md) to get started
+2. Browse [open issues](https://github.com/HackUCF/OnboardLite/issues) for ways to help
+3. Submit pull requests with your improvements
+4. Report bugs or suggest features through GitHub issues
+
+## Security
+
+Security is a top priority for OnboardLite. We implement industry best practices and regularly update our dependencies.
+
+**Found a security vulnerability?** Please report it responsibly to `execs@hackucf.org`.
+
+## Support
+
+- **Documentation**: Check our [Development](DEVELOPMENT.md) and [Deployment](DEPLOYMENT.md) guides
+- **Issues**: Report bugs or request features on [GitHub Issues](https://github.com/HackUCF/OnboardLite/issues)
+- **Community**: Join the discussion in the HackUCF Discord server
+- **Contact**: Reach out to the HackUCF team at `execs@hackucf.org`
+
+## License
+
+OnboardLite is open source software released under the [MIT License](LICENSE).
+
+---
+
+**Built with ❤️ by [HackUCF](https://hackucf.org) for the UCF community**
