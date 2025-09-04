@@ -141,42 +141,111 @@ function get_body() {
   return body;
 }
 
+// NID validation and formatting functions
+function isValidNID(nid) {
+  // UCF NID format: 2 lowercase letters followed by 6 digits
+  const nidPattern = /^([a-z]{2}[0-9]{6})$/;
+  return nidPattern.test(nid);
+}
+
+function formatNIDValue(value) {
+  if (!value) return value;
+  // Convert to lowercase and remove any non-alphanumeric characters
+  return value.toLowerCase().replace(/[^a-z0-9]/g, '');
+}
+
+function validateNIDField(element, is_loud) {
+  const value = element.value;
+  const formattedValue = formatNIDValue(value);
+  
+  // Auto-format the field value as the user types
+  if (value !== formattedValue) {
+    element.value = formattedValue;
+  }
+  
+  if (!formattedValue) {
+    if (is_loud && element.hasAttribute('required')) {
+      element.style.background = "var(--hackucf-error)";
+      element.style.color = "white";
+      if (element.placeholder) {
+        element.placeholder = element.placeholder.replaceAll(" (required!)", "");
+        element.placeholder += " (required!)";
+      }
+      return false;
+    }
+    return !element.hasAttribute('required');
+  }
+  
+  const isValid = isValidNID(formattedValue);
+  
+  if (is_loud) {
+    if (!isValid) {
+      element.style.background = "var(--hackucf-error)";
+      element.style.color = "white";
+      if (element.placeholder) {
+        element.placeholder = element.placeholder.replaceAll(" (invalid format!)", "");
+        element.placeholder += " (invalid format!)";
+      }
+    } else {
+      // Reset styling for valid input
+      element.style.background = "var(--hackucf-off-white)";
+      element.style.color = "black";
+      if (element.placeholder) {
+        element.placeholder = element.placeholder.replaceAll(" (required!)", "");
+        element.placeholder = element.placeholder.replaceAll(" (invalid format!)", "");
+      }
+    }
+  }
+  
+  return isValid;
+}
+
 function validate_required(is_loud) {
   const els = document.querySelectorAll("[required]");
   let result = true;
 
   for (let i = 0; i < els.length; i++) {
-    let value = get_value(els[i]);
+    let element = els[i];
+    
+    // Special handling for NID fields
+    if (element.nodeName === "INPUT" && element.name === "nid") {
+      if (!validateNIDField(element, is_loud)) {
+        result = false;
+      }
+      continue;
+    }
+    
+    let value = get_value(element);
     // Undefined checks
-    if (typeof value == "undefined" || !RegExp(els[i].pattern).test(value)) {
+    if (typeof value == "undefined" || !RegExp(element.pattern).test(value)) {
       // is_loud makes us populate 'validation required' texts.
       if (is_loud) {
-        if (els[i].nodeName == "FIELDSET") {
-          els[i].style.color = "var(--hackucf-error)";
-          els[i].style.fontWeight = "bold";
+        if (element.nodeName == "FIELDSET") {
+          element.style.color = "var(--hackucf-error)";
+          element.style.fontWeight = "bold";
         } else {
-          els[i].style.background = "var(--hackucf-error)";
-          els[i].style.color = "white";
-          if (els[i].placeholder) {
-            els[i].placeholder = els[i].placeholder.replaceAll(
+          element.style.background = "var(--hackucf-error)";
+          element.style.color = "white";
+          if (element.placeholder) {
+            element.placeholder = element.placeholder.replaceAll(
               " (required!)",
               "",
             );
-            els[i].placeholder += " (required!)";
+            element.placeholder += " (required!)";
           }
         }
       }
       result = false;
     } else if (is_loud) {
       // Revert previous style changes if input filled out.
-      if (els[i].nodeName == "FIELDSET") {
-        els[i].style.color = "var(--text)";
-        els[i].style.fontWeight = "normal";
+      if (element.nodeName == "FIELDSET") {
+        element.style.color = "var(--text)";
+        element.style.fontWeight = "normal";
       } else {
-        els[i].style.background = "var(--hackucf-off-white)";
-        els[i].style.color = "black";
-        if (els[i].placeholder) {
-          els[i].placeholder = els[i].placeholder.replaceAll(
+        element.style.background = "var(--hackucf-off-white)";
+        element.style.color = "black";
+        if (element.placeholder) {
+          element.placeholder = element.placeholder.replaceAll(
             " (required!)",
             "",
           );
@@ -335,6 +404,37 @@ window.onload = (evt) => {
   if (is_iOS && document.getElementById("apple_wallet")) {
     document.getElementById("apple_wallet").style.display = "block";
   }
+
+  // Add real-time validation for NID fields
+  const nidInputs = document.querySelectorAll('input[name="nid"]');
+  nidInputs.forEach(function(nidInput) {
+    nidInput.addEventListener('input', function(event) {
+      const formatted = formatNIDValue(event.target.value);
+      if (event.target.value !== formatted) {
+        event.target.value = formatted;
+      }
+      
+      // Real-time validation feedback
+      if (formatted.length > 0) {
+        if (isValidNID(formatted)) {
+          event.target.style.background = "var(--hackucf-off-white)";
+          event.target.style.color = "black";
+          if (event.target.placeholder) {
+            event.target.placeholder = event.target.placeholder.replaceAll(" (invalid format!)", "");
+          }
+        } else if (formatted.length === 8) {
+          // Only show error if they've typed enough characters
+          event.target.style.background = "#ffeeee";
+          event.target.style.color = "black";
+        }
+      }
+    });
+    
+    nidInput.addEventListener('blur', function(event) {
+      // Validate on blur (when user leaves the field)
+      validateNIDField(event.target, true);
+    });
+  });
 
   // Infra checker
   fetch("https://horizon.hackucf.org", { mode: "no-cors" })
