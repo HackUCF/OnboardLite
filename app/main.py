@@ -483,6 +483,15 @@ async def logout(request: Request):
     return rr
 
 
+@app.get("/scanner")
+async def scanner(request: Request):
+    """
+    Scanner interface for checking member dues status.
+    Touch-friendly interface that shows green/red based on QR code scan results.
+    """
+    return templates.TemplateResponse("scanner.html", {"request": request})
+
+
 @app.get("/favicon.ico", include_in_schema=False)
 async def favicon():
     return FileResponse("./app/static/favicon.ico")

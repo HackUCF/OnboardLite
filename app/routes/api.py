@@ -173,3 +173,30 @@ async def post_form(
     session.refresh(user)
 
     return user.model_dump()
+
+
+@router.get("/member/{member_id}/dues")
+async def get_member_dues_status(
+    member_id: str,
+    session: Session = Depends(get_session),
+):
+    """
+    Get dues payment status for a member by their ID.
+    Returns true if dues are paid, false if not paid or member not found.
+    """
+    try:
+        # Try to parse member_id as UUID
+        member_uuid = uuid.UUID(member_id)
+        statement = select(UserModel).where(UserModel.id == member_uuid)
+        user = session.exec(statement).one_or_none()
+        
+        if not user:
+            return {"dues": False}
+        
+        return {"dues": bool(user.did_pay_dues)}
+    except ValueError:
+        # Invalid UUID format
+        return {"dues": False}
+    except Exception:
+        # Any other error, return false for safety
+        return {"dues": False}
