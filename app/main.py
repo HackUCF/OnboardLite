@@ -484,7 +484,7 @@ async def logout(request: Request):
 
 
 @app.get("/scanner")
-async def scanner(request: Request):
+async def scanner(request: Request, current_user: CurrentMember):
     """
     Scanner interface for checking member dues status.
     Touch-friendly interface that shows green/red based on QR code scan results.
