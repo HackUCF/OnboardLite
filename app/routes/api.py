@@ -178,6 +178,7 @@ async def post_form(
 @router.get("/member/{member_id}/dues")
 async def get_member_dues_status(
     member_id: str,
+    current_user: CurrentMember,
     session: Session = Depends(get_session),
 ):
     """
