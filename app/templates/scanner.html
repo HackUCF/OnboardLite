@@ -100,6 +100,36 @@
     opacity: 0.7;
   }
 
+  .camera-controls {
+    position: fixed;
+    top: 2rem;
+    right: 2rem;
+    z-index: 20;
+  }
+
+  .camera-button {
+    background: rgba(0, 0, 0, 0.7);
+    border: 2px solid rgba(255, 255, 255, 0.3);
+    color: white;
+    padding: 0.75rem 1rem;
+    font-size: 0.9rem;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    backdrop-filter: blur(10px);
+    text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.5);
+  }
+
+  .camera-button:hover {
+    background: rgba(0, 0, 0, 0.9);
+    border-color: rgba(255, 255, 255, 0.5);
+    transform: translateY(-2px);
+  }
+
+  .camera-button:active {
+    transform: translateY(0);
+  }
+
   @media (max-width: 768px) {
     .title {
       font-size: 2rem;
@@ -127,6 +157,11 @@
 
 {% block content %}
 <div class="scanner-container" id="scannerContainer">
+  <div class="camera-controls">
+    <button class="camera-button" id="changeCameraBtn">
+      📷 Switch Camera
+    </button>
+  </div>
   <div class="scanner-content">
     <h1 class="title">Hack@UCF Dues Scanner</h1>
     <p class="subtitle">Point camera at member QR code</p>
@@ -150,6 +185,12 @@ function initScanner() {
     highlightScanRegion: true,
     returnDetailedScanResult: true,
   });
+  
+  // Check for saved camera preference
+  const savedCamera = localStorage.getItem("scannerCam");
+  if (savedCamera && typeof savedCamera !== "undefined") {
+    qrScanner.setCamera(savedCamera);
+  }
   
   qrScanner.start().catch(err => {
     console.error('Error starting scanner:', err);
@@ -227,10 +268,61 @@ function clearAndRestart() {
   }, 300);
 }
 
-// Touch/click handler
+// Switch camera functionality
+async function switchCamera() {
+  try {
+    const cameras = await QrScanner.listCameras();
+    
+    if (cameras.length <= 1) {
+      alert('Only one camera available');
+      return;
+    }
+    
+    let cameraOptions = 'Select a camera:\n\n';
+    cameras.forEach((camera, index) => {
+      cameraOptions += `${index}: ${camera.label || `Camera ${index + 1}`}\n`;
+    });
+    
+    const selection = prompt(cameraOptions + '\nEnter camera number:');
+    
+    if (selection !== null && selection !== '') {
+      const cameraIndex = parseInt(selection);
+      
+      if (cameraIndex >= 0 && cameraIndex < cameras.length) {
+        const selectedCameraId = cameras[cameraIndex].id;
+        
+        // Save camera preference
+        localStorage.setItem("scannerCam", selectedCameraId);
+        
+        // Switch to selected camera
+        await qrScanner.setCamera(selectedCameraId);
+        
+        console.log(`Switched to camera: ${cameras[cameraIndex].label || `Camera ${cameraIndex + 1}`}`);
+      } else {
+        alert('Invalid camera number');
+      }
+    }
+  } catch (error) {
+    console.error('Error switching camera:', error);
+    alert('Error switching camera. Make sure you have multiple cameras available.');
+  }
+}
+
+// Touch/click handler for clearing status
 document.getElementById('scannerContainer').addEventListener('click', function(e) {
+  // Don't trigger clear if clicking the camera button
+  if (e.target.id === 'changeCameraBtn') {
+    return;
+  }
   e.preventDefault();
   clearAndRestart();
+});
+
+// Camera switch button handler
+document.getElementById('changeCameraBtn').addEventListener('click', function(e) {
+  e.preventDefault();
+  e.stopPropagation();
+  switchCamera();
 });
 
 // Prevent context menu on long press
