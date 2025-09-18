@@ -154,6 +154,34 @@ function formatNIDValue(value) {
   return value.toLowerCase().replace(/[^a-z0-9]/g, '');
 }
 
+function getSpecificNIDError(formattedValue) {
+  if (!formattedValue) {
+    return " (required - format: ab123456)";
+  }
+  
+  if (formattedValue.length < 8) {
+    return ` (too short - need ${8 - formattedValue.length} more characters)`;
+  }
+  
+  if (formattedValue.length > 8) {
+    return " (too long - should be 8 characters)";
+  }
+  
+  // Check specific pattern issues
+  const firstTwoChars = formattedValue.substring(0, 2);
+  const lastSixChars = formattedValue.substring(2);
+  
+  if (!/^[a-z]{2}$/.test(firstTwoChars)) {
+    return " (must start with 2 letters)";
+  }
+  
+  if (!/^[0-9]{6}$/.test(lastSixChars)) {
+    return " (must end with 6 numbers)";
+  }
+  
+  return " (invalid format - use ab123456)";
+}
+
 function validateNIDField(element, is_loud) {
   const value = element.value;
   const formattedValue = formatNIDValue(value);
@@ -163,37 +191,32 @@ function validateNIDField(element, is_loud) {
     element.value = formattedValue;
   }
   
-  if (!formattedValue) {
-    if (is_loud && element.hasAttribute('required')) {
-      element.style.background = "var(--hackucf-error)";
-      element.style.color = "white";
-      if (element.placeholder) {
-        element.placeholder = element.placeholder.replaceAll(" (required!)", "");
-        element.placeholder += " (required!)";
-      }
-      return false;
-    }
-    return !element.hasAttribute('required');
-  }
-  
-  const isValid = isValidNID(formattedValue);
+  const isValid = formattedValue && isValidNID(formattedValue);
   
   if (is_loud) {
+    // Clear all previous error messages
+    if (element.placeholder) {
+      element.placeholder = element.placeholder
+        .replaceAll(" (required!)", "")
+        .replaceAll(" (invalid format!)", "")
+        .replaceAll(/ \(required - format: ab123456\)/, "")
+        .replaceAll(/ \(too short - need \d+ more characters?\)/, "")
+        .replaceAll(" (too long - should be 8 characters)", "")
+        .replaceAll(" (must start with 2 letters)", "")
+        .replaceAll(" (must end with 6 numbers)", "")
+        .replaceAll(" (invalid format - use ab123456)", "");
+    }
+    
     if (!isValid) {
       element.style.background = "var(--hackucf-error)";
       element.style.color = "white";
       if (element.placeholder) {
-        element.placeholder = element.placeholder.replaceAll(" (invalid format!)", "");
-        element.placeholder += " (invalid format!)";
+        element.placeholder += getSpecificNIDError(formattedValue);
       }
     } else {
       // Reset styling for valid input
       element.style.background = "var(--hackucf-off-white)";
       element.style.color = "black";
-      if (element.placeholder) {
-        element.placeholder = element.placeholder.replaceAll(" (required!)", "");
-        element.placeholder = element.placeholder.replaceAll(" (invalid format!)", "");
-      }
     }
   }
   
@@ -414,16 +437,23 @@ window.onload = (evt) => {
         event.target.value = formatted;
       }
       
-      // Real-time validation feedback
+      // Real-time validation feedback with specific error messages
       if (formatted.length > 0) {
         if (isValidNID(formatted)) {
           event.target.style.background = "var(--hackucf-off-white)";
           event.target.style.color = "black";
+          // Clear any error messages from placeholder
           if (event.target.placeholder) {
-            event.target.placeholder = event.target.placeholder.replaceAll(" (invalid format!)", "");
+            event.target.placeholder = event.target.placeholder
+              .replaceAll(/ \(required - format: ab123456\)/, "")
+              .replaceAll(/ \(too short - need \d+ more characters?\)/, "")
+              .replaceAll(" (too long - should be 8 characters)", "")
+              .replaceAll(" (must start with 2 letters)", "")
+              .replaceAll(" (must end with 6 numbers)", "")
+              .replaceAll(" (invalid format - use ab123456)", "");
           }
-        } else if (formatted.length === 8) {
-          // Only show error if they've typed enough characters
+        } else {
+          // Show gentle feedback while typing, more specific on blur
           event.target.style.background = "#ffeeee";
           event.target.style.color = "black";
         }
@@ -431,7 +461,7 @@ window.onload = (evt) => {
     });
     
     nidInput.addEventListener('blur', function(event) {
-      // Validate on blur (when user leaves the field)
+      // Validate on blur (when user leaves the field) with specific error messages
       validateNIDField(event.target, true);
     });
   });
