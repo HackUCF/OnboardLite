@@ -4,7 +4,6 @@ import logging
 import os
 import uuid
 from typing import Optional
-from urllib.parse import urlparse
 
 from fastapi import BackgroundTasks, Cookie, Depends, FastAPI, Request, Response, status
 from fastapi.openapi.utils import get_openapi

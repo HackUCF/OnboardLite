@@ -190,10 +190,10 @@ async def get_member_dues_status(
         member_uuid = uuid.UUID(member_id)
         statement = select(UserModel).where(UserModel.id == member_uuid)
         user = session.exec(statement).one_or_none()
-        
+
         if not user:
             return {"dues": False}
-        
+
         return {"dues": bool(user.did_pay_dues)}
     except ValueError:
         # Invalid UUID format
