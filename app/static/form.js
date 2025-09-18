@@ -199,8 +199,8 @@ function validateNIDField(element, is_loud) {
       element.placeholder = element.placeholder
         .replaceAll(" (required!)", "")
         .replaceAll(" (invalid format!)", "")
-        .replaceAll(/ \(required - format: ab123456\)/, "")
-        .replaceAll(/ \(too short - need \d+ more characters?\)/, "")
+        .replaceAll(" (required - format: ab123456)", "")
+        .replace(/ \(too short - need \d+ more characters?\)/g, "")
         .replaceAll(" (too long - should be 8 characters)", "")
         .replaceAll(" (must start with 2 letters)", "")
         .replaceAll(" (must end with 6 numbers)", "")
@@ -445,8 +445,8 @@ window.onload = (evt) => {
           // Clear any error messages from placeholder
           if (event.target.placeholder) {
             event.target.placeholder = event.target.placeholder
-              .replaceAll(/ \(required - format: ab123456\)/, "")
-              .replaceAll(/ \(too short - need \d+ more characters?\)/, "")
+              .replaceAll(" (required - format: ab123456)", "")
+              .replace(/ \(too short - need \d+ more characters?\)/g, "")
               .replaceAll(" (too long - should be 8 characters)", "")
               .replaceAll(" (must start with 2 letters)", "")
               .replaceAll(" (must end with 6 numbers)", "")
