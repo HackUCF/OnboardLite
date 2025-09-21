@@ -35,7 +35,7 @@ from app.util.approve import Approve
 
 # Import middleware
 from app.util.auth_dependencies import Authentication, CurrentMember, sign_redirect_url, verify_redirect_url
-from app.util.database import get_session, init_db, engine
+from app.util.database import engine, get_session, init_db
 from app.util.discord import Discord
 
 # Import error handling
@@ -81,11 +81,11 @@ def update_discord_model_for_existing_user(user_id: str, discord_data: dict):
             # Get the user with their Discord model
             statement = select(UserModel).where(UserModel.id == uuid.UUID(user_id)).options(selectinload(UserModel.discord))
             user = session.exec(statement).one_or_none()
-            
+
             if not user or not user.discord:
                 logger.warning(f"Could not find user or Discord model for user {user_id}")
                 return
-                
+
             # Update Discord model with fresh data from OAuth
             discord_model = user.discord
             discord_model.email = discord_data.get("email")
@@ -96,11 +96,11 @@ def update_discord_model_for_existing_user(user_id: str, discord_data: dict):
             discord_model.nitro = discord_data.get("premium_type")
             discord_model.locale = discord_data.get("locale")
             discord_model.username = discord_data.get("username")
-            
+
             session.add(discord_model)
             session.commit()
             logger.info(f"Updated Discord model for existing user {user_id}")
-        
+
     except Exception as e:
         logger.error(f"Failed to update Discord model for user {user_id}: {e}")
 
