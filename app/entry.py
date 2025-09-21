@@ -15,6 +15,7 @@ def run_uvicorn():
     command = [
         "uv",
         "run",
+        "--no-dev",
         "-m",
         "uvicorn",
         "app.main:app",
