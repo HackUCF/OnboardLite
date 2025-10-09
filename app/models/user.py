@@ -94,6 +94,7 @@ class UserModel(SQLModel, table=True):
     c3_interest: Optional[bool] = False
     attending: Optional[str] = ""
     comments: Optional[str] = ""
+    non_ucf_terms_agreement: Optional[bool] = False
 
     discord: DiscordModel = Relationship(back_populates="user")
     ethics_form: EthicsFormModel = Relationship(back_populates="user")
@@ -173,6 +174,7 @@ class UserModelMutable(BaseModel):
     # Other things
     attending: Optional[str] = None
     comments: Optional[str] = None
+    non_ucf_terms_agreement: Optional[bool] = None
     discord: Optional[DiscordModel] = None
     ethics_form: Optional[EthicsFormModel] = None
 
