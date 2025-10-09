@@ -35,7 +35,7 @@
         "label": "Are you a UCF student?",
         "caption": "If the answer is no, you are in the right place.",
         "input": "radio",
-        "options": ["Yes", "No"],
+        "options": ["No"],
         "key": "ucf_student",
         "required": true
       },
@@ -59,6 +59,14 @@
         "input": "radio",
         "options": ["Yes", "No"],
         "key": "is_returning",
+        "required": true
+      },
+      {
+        "label": "Non-UCF Terms Agreement",
+        "caption": "By contributing $10 to the Collegiate Cyber Defense Club, you acknowledge that you are supporting our organization as an external participant rather than an official registered member. While our meetings are open to the public, this contribution may provide you with additional benefits such as a t-shirt or pizza at events, with all participation in club activities and receipt of benefits subject to the sole discretion of the Executive Board. You understand that as an external participant, you do not hold membership status as defined in the club's Constitution, and therefore are not eligible to vote on club matters or run for elected positions. Please note that while other portions of our registration system may refer to you as a \"member\" for tracking purposes, this does not confer official membership status within the organization. By participating in any club activities, you agree to abide by the <a href='https://goldenrule.sswb.ucf.edu'>UCF Golden Rule</a>.",
+        "input": "radio",
+        "options": ["I agree to these terms"],
+        "key": "non_ucf_terms_agreement",
         "required": true
       },
       {
