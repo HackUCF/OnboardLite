@@ -3,7 +3,7 @@
 
 let userDict = {};
 let userList;
-let qrScanner;
+let codeReader;
 
 function load() {
   let valueNames = [
@@ -121,20 +121,29 @@ const sanitizeHTML = (data) => {
 };
 
 function showTable() {
-  qrScanner.stop();
+  if (codeReader) {
+    codeReader.reset();
+  }
 
   document.getElementById("user").style.display = "none";
   document.getElementById("scanner").style.display = "none";
   document.getElementById("users").style.display = "block";
 }
 
-function showQR() {
-  qrScanner.start();
-
+async function showQR() {
+  const videoElem = document.querySelector("video");
+  
   const camLS = localStorage.getItem("adminCam");
-  if (camLS && typeof camLS !== "undefined") {
-    qrScanner.setCamera(camLS);
-  }
+  const deviceId = (camLS && camLS !== "undefined") ? camLS : undefined;
+  
+  codeReader.decodeFromVideoDevice(deviceId, videoElem, (result, error) => {
+    if (result) {
+      scannedCode(result);
+    }
+    if (error && error.name !== 'NotFoundException') {
+      console.error('Decode error:', error);
+    }
+  });
 
   document.getElementById("user").style.display = "none";
   document.getElementById("users").style.display = "none";
@@ -438,27 +447,43 @@ function logoff() {
   window.location.href = "/logout";
 }
 
-function changeCamera() {
-  QrScanner.listCameras().then((evt) => {
-    const cameras = evt;
+async function changeCamera() {
+  try {
+    const cameras = await codeReader.listVideoInputDevices();
     let camArray = [];
     let camString = "Please enter a camera number:";
     for (let i = 0; i < cameras.length; i++) {
       camString += `\n${i}: ${cameras[i].label}`;
-      camArray.push(cameras[i].id);
+      camArray.push(cameras[i].deviceId);
     }
     let camSelect = prompt(camString);
 
-    localStorage.setItem("adminCam", camArray[camSelect]);
-    qrScanner.setCamera(camArray[camSelect]);
-  });
+    if (camSelect !== null && camSelect !== '') {
+      const deviceId = camArray[camSelect];
+      localStorage.setItem("adminCam", deviceId);
+      
+      // Restart scanner with new camera
+      codeReader.reset();
+      const videoElem = document.querySelector("video");
+      codeReader.decodeFromVideoDevice(deviceId, videoElem, (result, error) => {
+        if (result) {
+          scannedCode(result);
+        }
+        if (error && error.name !== 'NotFoundException') {
+          console.error('Decode error:', error);
+        }
+      });
+    }
+  } catch (error) {
+    console.error('Error changing camera:', error);
+  }
 }
 
 function scannedCode(result) {
   // Enter load mode...
-  qrScanner.stop();
+  codeReader.reset();
 
-  showUser(result.data);
+  showUser(result.text);
 }
 
 function filter(showOnlyActiveUsers) {
@@ -483,13 +508,8 @@ function filter(showOnlyActiveUsers) {
 window.onload = (evt) => {
   load();
 
-  // Prep QR library
-  const videoElem = document.querySelector("video");
-  qrScanner = new QrScanner(videoElem, scannedCode, {
-    maxScansPerSecond: 10,
-    highlightScanRegion: true,
-    returnDetailedScanResult: true,
-  });
+  // Prep QR library - ZXing
+  codeReader = new ZXing.BrowserQRCodeReader();
 
   // Default behavior
   document.getElementById("goBackBtn").onclick = (evt) => {
