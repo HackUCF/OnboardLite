@@ -9,3 +9,4 @@ infra_options.json
 _deploy.sh
 HackUCF.ovpn
 config.yml
+*.egg-info/
