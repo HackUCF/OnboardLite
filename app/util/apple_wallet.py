@@ -171,7 +171,17 @@ class AppleWalletGenerator:
 
             try:
                 # Generate the pass using passes_rs_py with all assets
-                generate_pass(config_json, self.cert_path, self.key_path, output_path, self.icon_path, self.icon2x_path, self.logo_path, self.logo2x_path)
+                generate_pass(
+                    config=config_json,
+                    cert_path=self.cert_path,
+                    key_path=self.key_path,
+                    output_path=output_path,
+                    icon_path=self.icon_path,
+                    icon2x_path=self.icon2x_path,
+                    logo_path=self.logo_path,
+                    logo2x_path=self.logo2x_path
+                    #ignore_expired=True  # Add this if you want to ignore expired certificates
+                )
 
                 # Read the generated pass file
                 with open(output_path, "rb") as f:
