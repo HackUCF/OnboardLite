@@ -20,9 +20,7 @@ def test_get_static():
         "form.js",
         "hackucf.css",
         "index.html",
-        "lib/qr-scanner.umd.min.js",
-        "lib/qr-scanner.min.js",
-        "lib/qr-scanner-worker.min.js",
+        "lib/zxing.min.js",
         "qr_hack_dark.svg",
         "qr_hack_light.svg",
     ]

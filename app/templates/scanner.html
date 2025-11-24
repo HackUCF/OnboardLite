@@ -3,8 +3,8 @@
 {% block title %}Dues Scanner - Hack@UCF{% endblock %}
 
 {% block head %}
-<!-- QR library -->
-<script src="/static/lib/qr-scanner.umd.min.js"></script>
+<!-- QR library - ZXing -->
+<script src="/static/lib/zxing.min.js"></script>
 <style>
   body {
     margin: 0;
@@ -174,41 +174,61 @@
 </div>
 
 <script>
-let qrScanner;
+let codeReader;
 let isScanning = true;
+let currentDeviceId = null;
 
 // Initialize QR Scanner
-function initScanner() {
+async function initScanner() {
   const video = document.getElementById('qr-video');
-  qrScanner = new QrScanner(video, onScanResult, {
-    maxScansPerSecond: 5,
-    highlightScanRegion: true,
-    returnDetailedScanResult: true,
-  });
   
-  // Check for saved camera preference
-  const savedCamera = localStorage.getItem("scannerCam");
-  if (savedCamera && typeof savedCamera !== "undefined") {
-    qrScanner.setCamera(savedCamera);
-  }
-  
-  qrScanner.start().catch(err => {
+  try {
+    // Create ZXing code reader
+    codeReader = new ZXing.BrowserQRCodeReader();
+    
+    // Check for saved camera preference
+    const savedCamera = localStorage.getItem("scannerCam");
+    if (savedCamera && savedCamera !== "undefined") {
+      currentDeviceId = savedCamera;
+    } else {
+      // Get default camera (prefer back camera)
+      const devices = await codeReader.listVideoInputDevices();
+      if (devices.length > 0) {
+        // Try to find back camera
+        const backCamera = devices.find(device => 
+          device.label.toLowerCase().includes('back') || 
+          device.label.toLowerCase().includes('environment')
+        );
+        currentDeviceId = backCamera ? backCamera.deviceId : devices[0].deviceId;
+      }
+    }
+    
+    // Start decoding
+    codeReader.decodeFromVideoDevice(currentDeviceId, video, (result, error) => {
+      if (result && isScanning) {
+        onScanResult(result);
+      }
+      if (error && error.name !== 'NotFoundException') {
+        console.error('Decode error:', error);
+      }
+    });
+  } catch (err) {
     console.error('Error starting scanner:', err);
     showError('Camera Error', 'Unable to access camera');
-  });
+  }
 }
 
 // Handle scan result
 async function onScanResult(result) {
   if (!isScanning) return;
   
-  console.log('Scanned:', result.data);
-  qrScanner.stop();
+  console.log('Scanned:', result.text);
+  stopScanner();
   isScanning = false;
   
   try {
     // Call API to check dues status
-    const response = await fetch(`/api/member/${result.data}/dues`);
+    const response = await fetch(`/api/member/${result.text}/dues`);
     const data = await response.json();
     
     if (data.dues) {
@@ -219,6 +239,13 @@ async function onScanResult(result) {
   } catch (error) {
     console.error('Error checking dues:', error);
     showError();
+  }
+}
+
+// Stop scanner
+function stopScanner() {
+  if (codeReader) {
+    codeReader.reset();
   }
 }
 
@@ -262,16 +289,14 @@ function clearAndRestart() {
   // Restart scanner
   setTimeout(() => {
     isScanning = true;
-    qrScanner.start().catch(err => {
-      console.error('Error restarting scanner:', err);
-    });
+    initScanner();
   }, 300);
 }
 
 // Switch camera functionality
 async function switchCamera() {
   try {
-    const cameras = await QrScanner.listCameras();
+    const cameras = await codeReader.listVideoInputDevices();
     
     if (cameras.length <= 1) {
       alert('Only one camera available');
@@ -289,13 +314,23 @@ async function switchCamera() {
       const cameraIndex = parseInt(selection);
       
       if (cameraIndex >= 0 && cameraIndex < cameras.length) {
-        const selectedCameraId = cameras[cameraIndex].id;
+        const selectedCameraId = cameras[cameraIndex].deviceId;
         
         // Save camera preference
         localStorage.setItem("scannerCam", selectedCameraId);
+        currentDeviceId = selectedCameraId;
         
-        // Switch to selected camera
-        await qrScanner.setCamera(selectedCameraId);
+        // Restart scanner with new camera
+        stopScanner();
+        const video = document.getElementById('qr-video');
+        codeReader.decodeFromVideoDevice(currentDeviceId, video, (result, error) => {
+          if (result && isScanning) {
+            onScanResult(result);
+          }
+          if (error && error.name !== 'NotFoundException') {
+            console.error('Decode error:', error);
+          }
+        });
         
         console.log(`Switched to camera: ${cameras[cameraIndex].label || `Camera ${cameraIndex + 1}`}`);
       } else {
@@ -337,9 +372,7 @@ window.addEventListener('load', function() {
 
 // Cleanup on page unload
 window.addEventListener('beforeunload', function() {
-  if (qrScanner) {
-    qrScanner.destroy();
-  }
+  stopScanner();
 });
 </script>
 {% endblock %}
