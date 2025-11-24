@@ -121,7 +121,13 @@ const sanitizeHTML = (data) => {
 };
 
 function showTable() {
-  qrScanner.stop();
+  try {
+    if (qrScanner) {
+      qrScanner.stop();
+    }
+  } catch (error) {
+    console.warn("Error stopping QR scanner:", error);
+  }
 
   document.getElementById("user").style.display = "none";
   document.getElementById("scanner").style.display = "none";
@@ -129,11 +135,31 @@ function showTable() {
 }
 
 function showQR() {
-  qrScanner.start();
+  try {
+    if (qrScanner) {
+      qrScanner.start().catch(error => {
+        console.error("Failed to start QR scanner:", error);
+        alert("Failed to start camera. Please check camera permissions and try again.");
+        showTable();
+        return;
+      });
 
-  const camLS = localStorage.getItem("adminCam");
-  if (camLS && typeof camLS !== "undefined") {
-    qrScanner.setCamera(camLS);
+      const camLS = localStorage.getItem("adminCam");
+      if (camLS && typeof camLS !== "undefined") {
+        qrScanner.setCamera(camLS).catch(error => {
+          console.warn("Failed to set camera:", error);
+        });
+      }
+    } else {
+      console.error("QR scanner not initialized");
+      alert("QR scanner not available. Please refresh the page and try again.");
+      return;
+    }
+  } catch (error) {
+    console.error("Error starting QR scanner:", error);
+    alert("Error starting camera. Please refresh the page and try again.");
+    showTable();
+    return;
   }
 
   document.getElementById("user").style.display = "none";
@@ -434,9 +460,49 @@ function loadMembershipHistory(userId) {
 }
 
 function logoff() {
+  // Clean up QR scanner before logging off
+  cleanupQrScanner();
+  
   document.cookie = "token=; Max-Age=0; path=/; domain=" + location.hostname;
   window.location.href = "/logout";
 }
+
+// Add cleanup function for QR scanner
+function cleanupQrScanner() {
+  try {
+    if (qrScanner) {
+      qrScanner.stop();
+      qrScanner.destroy();
+      qrScanner = null;
+    }
+  } catch (error) {
+    console.warn("Error cleaning up QR scanner:", error);
+  }
+}
+
+// Add page unload handler to clean up resources
+window.addEventListener('beforeunload', function(event) {
+  cleanupQrScanner();
+});
+
+// Add visibility change handler to pause/resume scanner appropriately
+document.addEventListener('visibilitychange', function() {
+  if (qrScanner) {
+    try {
+      if (document.hidden) {
+        // Page is hidden, stop scanner to save resources
+        qrScanner.stop();
+      } else if (document.getElementById("scanner").style.display === "block") {
+        // Page is visible and scanner should be active
+        qrScanner.start().catch(error => {
+          console.warn("Failed to restart scanner on visibility change:", error);
+        });
+      }
+    } catch (error) {
+      console.warn("Error handling visibility change:", error);
+    }
+  }
+});
 
 function changeCamera() {
   QrScanner.listCameras().then((evt) => {
@@ -449,16 +515,44 @@ function changeCamera() {
     }
     let camSelect = prompt(camString);
 
-    localStorage.setItem("adminCam", camArray[camSelect]);
-    qrScanner.setCamera(camArray[camSelect]);
+    if (camSelect !== null && camSelect !== "" && camArray[camSelect]) {
+      try {
+        localStorage.setItem("adminCam", camArray[camSelect]);
+        if (qrScanner) {
+          qrScanner.setCamera(camArray[camSelect]).catch(error => {
+            console.error("Failed to change camera:", error);
+            alert("Failed to change camera. Please try again.");
+          });
+        }
+      } catch (error) {
+        console.error("Error changing camera:", error);
+        alert("Error changing camera. Please try again.");
+      }
+    }
+  }).catch(error => {
+    console.error("Failed to list cameras:", error);
+    alert("Failed to list available cameras. Please check camera permissions.");
   });
 }
 
 function scannedCode(result) {
-  // Enter load mode...
-  qrScanner.stop();
+  try {
+    // Stop the scanner and clean up resources
+    if (qrScanner) {
+      qrScanner.stop();
+    }
 
-  showUser(result.data);
+    if (result && result.data) {
+      showUser(result.data);
+    } else {
+      console.warn("Invalid QR code result:", result);
+      alert("Invalid QR code. Please try again.");
+    }
+  } catch (error) {
+    console.error("Error processing scanned QR code:", error);
+    alert("Error processing QR code. Please try again.");
+    showTable();
+  }
 }
 
 function filter(showOnlyActiveUsers) {
@@ -483,13 +577,39 @@ function filter(showOnlyActiveUsers) {
 window.onload = (evt) => {
   load();
 
-  // Prep QR library
-  const videoElem = document.querySelector("video");
-  qrScanner = new QrScanner(videoElem, scannedCode, {
-    maxScansPerSecond: 10,
-    highlightScanRegion: true,
-    returnDetailedScanResult: true,
-  });
+  // Prep QR library with error handling
+  try {
+    const videoElem = document.querySelector("video");
+    if (!videoElem) {
+      console.error("Video element not found");
+      return;
+    }
+
+    qrScanner = new QrScanner(videoElem, scannedCode, {
+      maxScansPerSecond: 10,
+      highlightScanRegion: true,
+      returnDetailedScanResult: true,
+      onDecodeError: (error) => {
+        // Only log non-standard errors to avoid spam
+        if (error.toString() !== "No QR code found") {
+          console.warn("QR decode error:", error);
+        }
+      }
+    });
+
+    // Add error handling for scanner initialization
+    qrScanner._qrEnginePromise.catch(error => {
+      console.error("QR engine initialization failed:", error);
+    });
+
+  } catch (error) {
+    console.error("Failed to initialize QR scanner:", error);
+    // Hide scanner-related UI elements if initialization fails
+    const scannerButton = document.getElementById("scannerOn");
+    if (scannerButton) {
+      scannerButton.style.display = "none";
+    }
+  }
 
   // Default behavior
   document.getElementById("goBackBtn").onclick = (evt) => {
