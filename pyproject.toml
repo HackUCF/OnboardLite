@@ -14,7 +14,7 @@ dependencies = [
     "jinja2==3.1.6",
     "joserfc==1.4.2",
     "passes-rs-py==4.0.1",
-    "pydantic~=2.11.7",
+    "pydantic~=2.12.5",
     "pydantic-settings~=2.10.1",
     "python-keycloak~=5.8.1",
     "pyyaml~=6.0.2",
