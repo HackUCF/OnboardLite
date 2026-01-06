@@ -10,7 +10,7 @@ dependencies = [
     "email-validator>=2.3.0",
     "fastapi[standard]==0.121.2",
     "google-api-python-client~=2.187.0",
-    "google-auth~=2.40.3",
+    "google-auth~=2.47.0",
     "jinja2==3.1.6",
     "joserfc==1.4.2",
     "passes-rs-py==4.0.1",
