@@ -8,6 +8,7 @@ from typing import Optional
 
 from fastapi import APIRouter, BackgroundTasks, Body, Depends, HTTPException, Request, Response, status
 from fastapi.templating import Jinja2Templates
+from pydantic import BaseModel
 from sqlalchemy.orm import selectinload
 from sqlmodel import Session, select
 
@@ -49,48 +50,46 @@ async def admin(request: Request, current_admin: CurrentAdmin):
     )
 
 
-@router.get("/infra/")
-async def get_infra(
+class InfraProvisionRequest(BaseModel):
+    member_id: uuid.UUID
+    reset_password: bool = False
+
+
+@router.post("/infra/")
+async def post_infra(
     request: Request,
     background_tasks: BackgroundTasks,
     current_admin: CurrentAdmin,
-    member_id: Optional[uuid.UUID] = None,
+    provision_request: InfraProvisionRequest,  # ← Use request body
     session: Session = Depends(get_session),
-    reset_password: bool = False,
 ):
-    """
-    API endpoint to FORCE-provision Infra credentials (even without membership!!!)
-    """
+    """API endpoint to FORCE-provision Infra credentials"""
 
-    if member_id is None:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Missing member_id parameter")
+    member_id = provision_request.member_id
+    reset_password = provision_request.reset_password
 
     user_data = session.exec(select(UserModel).where(UserModel.id == member_id)).one_or_none()
 
+    if not user_data:
+        raise HTTPException(status_code=404, detail="User not found")
+
     creds = Approve.provision_infra(member_id, user_data, reset_password=reset_password)
 
-    if creds is None:
-        creds = {}
-
     if not creds:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
+        raise HTTPException(status_code=500, detail="Failed to provision credentials")
 
-    # Get user data
-
-    # Send DM...
+    # Send notifications
     new_creds_msg = load_and_render_template("app/messages/manual_invite_creds.md", user_data=user_data, creds=creds, settings=Settings())
-    logger.debug(f"Rendered message: {new_creds_msg}")
-
-    # Send Discord message
     Discord.send_message(user_data.discord_id, new_creds_msg)
     Email.send_email("Hack@UCF Private Cloud Credentials", new_creds_msg, user_data.email)
+
     return {
         "username": creds.get("username"),
         "password": creds.get("password"),
     }
 
 
-@router.get("/refresh/")
+@router.post("/refresh/")
 async def get_refresh(
     request: Request,
     background_tasks: BackgroundTasks,

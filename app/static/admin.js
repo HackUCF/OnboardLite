@@ -342,7 +342,10 @@ function sendDiscordDM(user_id, message) {
 }
 
 function verifyUser(user_id) {
-  fetch("/admin/refresh?member_id=" + user_id)
+  fetch("/admin/refresh?member_id=" + user_id, {
+    method: "POST",
+    credentials: "include",
+  })
     .then((data) => {
       return data.json();
     })
@@ -361,21 +364,37 @@ function verifyUser(user_id) {
 }
 
 function inviteToInfra(user_id, reset_password = false) {
-  fetch(
-    "/admin/infra?member_id=" + user_id + "&reset_password=" + reset_password,
-  )
-    .then((data) => {
-      return data.json();
+  fetch("/admin/infra", {
+    method: "POST",
+    credentials: "include",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      member_id: user_id,
+      reset_password: reset_password,
+    }),
+  })
+    .then((response) => {
+      if (!response.ok) {
+        return response.json().then((err) => {
+          throw new Error(err.detail || `HTTP ${response.status}`);
+        });
+      }
+      return response.json();
     })
     .then((resp) => {
-      // Update user data.
       alert(`The user has been provisioned and a Discord message with credentials sent!
 
-Username: ${resp.username}
-Password: ${resp.password}`);
+ Username: ${resp.username}
+ Password: ${resp.password}`);
 
       userDict[user_id].infra_email = resp.username;
       showUser(user_id);
+    })
+    .catch((error) => {
+      alert(`Error provisioning infrastructure access: ${error.message}`);
+      console.error("Infra provisioning failed:", error);
     });
 }
 

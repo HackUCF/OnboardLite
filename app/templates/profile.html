@@ -39,14 +39,12 @@
             {% if user_data.get('is_full_member', False) or user_data.get('infra_email', False) %}
             <h2>Infra Settings</h2>
             <p> By accessing the Hack@UCF private cloud platform you agree to the Acceptable Use Policy located <a href="https://help.hackucf.org/misc/aup">here.</a> </p>
-                <details>
                     <summary><h2>OpenVPN Profile</h2></summary>
                     <span> <p>Download your OpenVPN Profile here. This will expire eventually. </p>
                         <a href="/infra/openvpn" download="hackucf.ovpn">
                         <button class="btn"><i class="fa-solid fa-download"></i> Download VPN</button>
                         </a>
                     </span>
-                </details>
             {% endif %}
 
             <h1>Your Personal Information</h1>
