@@ -1,151 +1,261 @@
 # OnboardLite
 
-OnboardLite is the result of the Influx Initiative, our vision for an improved student organization lifecycle at the University of Central Florida
+> Hack@UCF's modern membership management and onboarding system
 
+OnboardLite is a comprehensive membership lifecycle platform built for student organizations at the University of Central Florida. Part of the Influx Initiative, it streamlines member registration, dues payment, and infrastructure provisioning.
 
+## Features
 
-## Local Dev
-```
+- **Discord OAuth Integration** - Seamless authentication using Discord accounts
+- **Stripe Payment Processing** - Automated dues collection and verification
+- **Mobile Wallet Support** - Apple Wallet and Google Wallet membership passes
+- **Infrastructure Provisioning** - Automated private cloud access for members
+- **Admin Dashboard** - Comprehensive member management and analytics
+- **Form System** - Flexible JSON-based form rendering with Kennelish
+- **API Access** - RESTful API with JWT authentication and API key support
+- **Security First** - CSRF protection, secure session management, and comprehensive audit logging
+
+## Quick Start
+
+### Prerequisites
+
+- Python 3.11+
+- SQLite (development) or PostgreSQL (production)
+- Discord Application (for OAuth)
+- Stripe Account (for payments)
+
+### Local Development
+
+```bash
+# Clone repository
 git clone https://github.com/HackUCF/OnboardLite.git
-python3 -m venv .venv
-echo ".venv/" > ./.git/info/exclude
-source ./.venv/bin/activate
-python3 -m pip install -r requirements.txt
-python3 -m pip install -r requirements-dev.txt
-pre-commit install
-mkdir ./config
-cp options-example.yml ./config/options.yml
-```
-Goto https://discord.com/developers/applications create an application. Then under oauth2 get client id and client sceret set redir url to ``http://localhost:8000/api/oauth/?redir=_redir``
-Set
-```
-discord
-   client_id:
-   secret:
-   redirect_base: http://localhost:8000/api/oauth/?redir=
-   enable: false
-```
-set
-```
-email:
-    enable false
-```
-Set
-```
-http:
-    domain:  localhost:8000
-```
-Set jwt secret to a <32 charcter random string
+cd OnboardLite
 
-Set database to
+# Install UV
+curl -LsSf https://astral.sh/uv/install.sh | sh
+
+# Set up pre-commit hooks
+uv run pre-commit install
+
+# Create config directory
+mkdir -p config database
+cp options-example.yml config/options.yml
+
+# Edit config/options.yml with your settings
+# See DEVELOPER_GUIDE.md for detailed configuration
+
+# Run development server
+uv run uvicorn app.main:app --reload --port 8000
 ```
+
+Visit `http://localhost:8000` to see the application.
+
+### Docker Development
+
+```bash
+docker compose -f docker-compose-dev.yml up --watch
+```
+
+
+
+## Architecture
+
+OnboardLite is built with:
+
+- **FastAPI** - Modern Python web framework
+- **SQLModel** - SQL database ORM with Pydantic integration
+- **Jinja2** - Server-side template rendering
+- **Stripe** - Payment processing
+- **Discord OAuth** - User authentication
+- **Google/Apple Wallet APIs** - Mobile pass generation
+
+### Project Structure
+
+```
+OnboardLite/
+├── app/
+│   ├── main.py              # Application entry point
+│   ├── models/              # Database models
+│   ├── routes/              # API endpoints
+│   ├── util/                # Utilities and helpers
+│   ├── templates/           # Jinja2 HTML templates
+│   └── static/              # CSS, JS, images
+├── forms/                   # Kennelish form definitions
+├── config/                  # Configuration files
+└── tests/                   # Test suite
+```
+
+## Configuration
+
+OnboardLite uses YAML configuration files. Key settings:
+
+```yaml
+# Discord OAuth
+discord:
+  client_id: your_client_id
+  secret: your_secret
+  redirect_base: http://localhost:8000/api/oauth/
+
+# JWT Authentication
+jwt:
+  secret: your_random_secret_32chars_min
+  lifetime_user: 9072000  # 15 weeks
+  lifetime_sudo: 86400    # 1 day
+
+# Database
 database:
-    url: "sqlite:////data/database.db"  # For docker create database/
-    url: "sqlite:///database/database.db" # For local dev create database/
+  url: "sqlite:///database/database.db"
+
+# Stripe Payments
+stripe:
+  api_key: sk_test_...
+  webhook_secret: whsec_...
+  pause_payments: false
 ```
-To run you can do either
 
-``python3 -m uvicorn app.main:app --host 0.0.0.0 --reload --port 8000``
+See `options-example.yml` for complete configuration reference.
 
-or
+## Security
 
-``docker compose -f docker-compose-dev.yml watch``
+OnboardLite implements modern web security practices:
 
-Debug in  vscode create ``.vscode/launch.json``
+- **Secure Sessions** - HTTP-only cookies with configurable lifetimes
+- **API Authentication** - JWT tokens and API keys with admin-level access
+- **Input Validation** - Pydantic models for all user input
+- **SQL Injection Prevention** - SQLModel ORM with parameterized queries
+
+### Reporting Security Issues
+
+Please report security vulnerabilities to `execs@hackucf.org` or through [GitHub Security Advisories](https://github.com/HackUCF/OnboardLite/security).
+
+
+## Development
+
+### Running Tests
+
+```bash
+uv run pytest
 ```
+
+### Code Quality
+
+```bash
+# Format code
+uv run ruff format ./
+
+# Lint
+uv run ruff check app/
+
+```
+
+### VS Code Debugging
+
+Create `.vscode/launch.json`:
+
+```json
 {
-    "version": "0.2.0",
-    "configurations": [
-
-        {
-            "name": "Python: FastAPI",
-            "type": "debugpy",
-            "justMyCode": true,
-            "request": "launch",
-            "module": "uvicorn",
-            "args": [
-                "app.main:app",
-                "--reload",
-                "--port",
-                "8000"
-            ]
-        }
-
-    ]
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "Python: FastAPI",
+      "type": "debugpy",
+      "request": "launch",
+      "module": "uvicorn",
+      "args": ["app.main:app", "--reload", "--port", "8000"]
+    }
+  ]
 }
 ```
 
-## Deploying
+## Deployment
 
-1. Deploy a box.
-2. Make sure the AWS CLI is set up and that `~/.aws` is populated.
-- Create a new AWS user with the policies `AmazonDynamoDBFullAccess` and `PowerUserAccess` (or preferrably, a policy that includes the actions `dynamodb:*` and `sso:account:access`)
-- [Install the AWS CLI](https://docs.aws.amazon.com/cli/latest/userguide/getting-started-install.html)
-- Run `aws configure sso` on the host machine. See [this article](https://docs.aws.amazon.com/cli/latest/userguide/sso-configure-profile-token.html) for more details.
-- Create a new DynamoDB table named "hackucf_members" (default) with partition key `id`
-3. Make sure Stripe is configured to work with a webhook at `$URL/pay/webhook/validate` and the account is activated.
-- Create the webhook at the desired domain. Include the events `checkout.session.*`.
-- Create a product to represent dues payments in the dashboard. This should be $10 + $0.60 to account for Stripe fees.
-4. Request a configuration file with all the neccesary secrets/configurations for AWS, Stripe, Discord, and others.
-5. Install dependencies: `sudo apt install -y nginx certbot build-essential python3.11 python3.11-dev` (or later versions of python3). You may need to use [get-pip.py](https://bootstrap.pypa.io/get-pip.py) to install `pip3.11` as well.
-6. Install Python dependencies: `python3.11 -m pip install -r requirements.txt`
-7. Configure `nginx` (recommended) to proxy to port 80/443 + enable HTTPS. Set headers like `Content-Security-Policy`.
-- If you use nginx, PLEASE use HTTPS (if you can; Cloudflare will probably disagree and want to use its own cert).
-8. Install redis ``sudo apt install redis``
-9. Drop the following `systemd` service, replacing values as appropiate:
-```conf
-[Unit]
-Description=Uvicorn instance to serve OnboardLite
-After=network.target
+### Production with Docker
 
-[Service]
-User=ubuntu
-Group=www-data
-WorkingDirectory=/home/onboard-user/OnboardLite/
-Environment="PATH=/home/onboard-user/OnboardLite/"
-ExecStart=python3.11 -m uvicorn index:app --host 127.0.0.1 --port 8000 --workers 2
+```bash
+# Build and run
+docker compose up -d
 
-[Install]
-WantedBy=multi-user.target
+# View logs
+docker compose logs -f
+
+# Stop
+docker compose down
 ```
-10. Drop the following nginx site config:
-```conf
-server {
-        listen 80;
-        listen [::]:80;
 
-        server_name join.hackucf.org;
+### Environment Variables
 
-        proxy_set_header X-Forwarded-For $proxy_protocol_addr; # To forward the original client's IP address
-        proxy_set_header X-Forwarded-Proto $scheme; # to forward the  original protocol (HTTP or HTTPS)
-        proxy_set_header Host $host; # to forward the original host requested by the client
+Production deployments should use environment variables for secrets:
 
-        root /var/www/html;
-        index index.html;
-
-        location ^~ / {
-                proxy_pass http://127.0.0.1:8000;
-        }
-}
+```bash
+export DISCORD_CLIENT_SECRET=...
+export STRIPE_API_KEY=...
+export JWT_SECRET=...
 ```
-11. Start and enable the service using `systemctl`. Do the same for `nginx` if installed.
-12. Put the service behind Cloudflare (optional).
-13. Generate the Apple Wallet secrets and place them in `config/pki`. See [this tutorial](https://github.com/alexandercerutti/passkit-generator/wiki/Generating-Certificates) for details.
-14. Profit!
-
-## Editing Form Data
-
-To edit questions on a form, edit the JSON files in the `forms/` folder. Each JSON is a separate page that acts as a discrete form, with each value correlated to a database entry. OnboardLite uses a file format based on a simplified [Sileo Native Depiction](https://developer.getsileo.app/native-depictions) and achieves the same goal: render a UI from a JSON schema. The schema is, honestly, poorly documented, but is rendered by `util/kennelish.py`. In short, each object in an array is a discrete element that is rendered.
-
-Database entries must be defined in `models/user.py` before being called in a form. Data type valdiation is enforced by Pydantic.
-
-## Sudo Mode
-
-Administrators are classified as trusted Operations members and are *not* the same thing as Executives. These are people who can view roster logs, and should be FERPA-trained by UCF (either using the RSO training or the general TA training). The initial administrator has to be set via DynamoDB's user interface.
-
-## Security Concerns
-
-Please report security vulnerabilities to `execs@hackucf.org`.
 
 
+## Admin Setup
 
+The first admin must be set manually:
+
+1. Access the database (SQLite or PostgreSQL)
+2. Update the user's `sudo` field to `true`:
+
+```sql
+UPDATE usermodel SET sudo = true WHERE discord_id = 'YOUR_DISCORD_ID';
+```
+
+## Kennelish Forms
+
+OnboardLite uses a custom form system called Kennelish (inspired by Sileo Native Depictions):
+
+```json
+[
+  {
+    "type": "text",
+    "key": "first_name",
+    "label": "First Name",
+    "required": true
+  },
+  {
+    "type": "email",
+    "key": "email",
+    "label": "Email Address"
+  }
+]
+```
+
+Forms are stored in `forms/` and rendered dynamically. 
+
+## API Usage
+
+### Authentication
+
+**Web Users (Discord OAuth):**
+- Authenticate via `/discord/new`
+- Receive JWT in HTTP-only cookie
+- Session lifetime: 15 weeks (regular), 1 day (admin)
+
+**API Keys:**
+```bash
+curl -H "Authorization: Bearer onboard_live_your_key_here" \
+     https://join.hackucf.org/admin/list
+```
+
+API keys are configured in `config/options.yml` and have full admin access.
+
+
+
+### Getting Help
+
+- **Issues** - [GitHub Issues](https://github.com/HackUCF/OnboardLite/issues)
+- **Discussions** - [GitHub Discussions](https://github.com/HackUCF/OnboardLite/discussions)
+
+## License
+
+OnboardLite is licensed under the MIT License. See [LICENSE](LICENSE) for details.
+
+Copyright (c) 2026 Collegiate Cyber Defense Club
+
+## Acknowledgments
+
+Built with ❤️ by [Hack@UCF](https://hackucf.org)
