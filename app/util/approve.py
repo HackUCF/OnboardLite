@@ -94,10 +94,7 @@ class Approve:
                     "enabled": True,
                     "firstName": first_name,
                     "lastName": last_name,
-                    "attributes": {
-                        "onboard-membership-id": str(user_data.id),
-                        "discord-id": str(user_data.discord_id)
-                    },
+                    "attributes": {"onboard-membership-id": str(user_data.id), "discord-id": str(user_data.discord_id)},
                     "credentials": [
                         {
                             "value": password,

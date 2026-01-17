@@ -179,8 +179,8 @@ class AppleWalletGenerator:
                     icon_path=self.icon_path,
                     icon2x_path=self.icon2x_path,
                     logo_path=self.logo_path,
-                    logo2x_path=self.logo2x_path
-                    #ignore_expired=True  # Add this if you want to ignore expired certificates
+                    logo2x_path=self.logo2x_path,
+                    # ignore_expired=True  # Add this if you want to ignore expired certificates
                 )
 
                 # Read the generated pass file
