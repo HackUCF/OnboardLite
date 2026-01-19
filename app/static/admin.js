@@ -400,55 +400,105 @@ function inviteToInfra(user_id, reset_password = false) {
 
 function loadMembershipHistory(userId) {
   const historyContainer = document.getElementById("membership_history");
-  historyContainer.innerHTML = "<p>Loading membership history...</p>";
+
+  // Show loading message
+  const loadingP = document.createElement('p');
+  loadingP.textContent = 'Loading membership history...';
+  historyContainer.innerHTML = '';
+  historyContainer.appendChild(loadingP);
 
   fetch(`/admin/membership_history/?user_id=${userId}`)
     .then((response) => response.json())
     .then((data) => {
+      // Clear loading message
+      historyContainer.innerHTML = '';
+
       if (data.error) {
-        historyContainer.innerHTML = `<p>Error loading history: ${data.error}</p>`;
+        const errorP = document.createElement('p');
+        errorP.textContent = 'Error loading history: ' + data.error;
+        historyContainer.appendChild(errorP);
         return;
       }
 
       const history = data.data;
       if (history.length === 0) {
-        historyContainer.innerHTML =
-          "<p>No membership history found for this user.</p>";
+        const noHistoryP = document.createElement('p');
+        noHistoryP.textContent = 'No membership history found for this user.';
+        historyContainer.appendChild(noHistoryP);
         return;
       }
 
-      let historyHTML = "<table class='data_table'>";
-      historyHTML += "<thead><tr>";
-      historyHTML += "<th>Reset Date</th>";
-      historyHTML += "<th>Was Member</th>";
-      historyHTML += "<th>Paid Dues</th>";
-      historyHTML += "<th>Reason</th>";
-      historyHTML += "<th>Name at Reset</th>";
-      historyHTML += "<th>Email at Reset</th>";
-      historyHTML += "<th>Discord at Reset</th>";
-      historyHTML += "</tr></thead><tbody>";
+      // Create table
+      const table = document.createElement('table');
+      table.className = 'data_table';
 
-      history.forEach((record) => {
-        const resetDate = new Date(record.reset_date).toLocaleString();
-        const fullName = `${record.first_name_snapshot} ${record.surname_snapshot}`;
+      // Create thead
+      const thead = document.createElement('thead');
+      const headerRow = document.createElement('tr');
 
-        historyHTML += "<tr>";
-        historyHTML += `<td>${resetDate}</td>`;
-        historyHTML += `<td>${record.was_full_member ? "✔️" : "❌"}</td>`;
-        historyHTML += `<td>${record.had_paid_dues ? "✔️" : "❌"}</td>`;
-        historyHTML += `<td>${sanitizeHTML(record.reset_reason)}</td>`;
-        historyHTML += `<td>${sanitizeHTML(fullName)}</td>`;
-        historyHTML += `<td>${sanitizeHTML(record.email_snapshot || "N/A")}</td>`;
-        historyHTML += `<td>${sanitizeHTML(record.discord_username_snapshot || "N/A")}</td>`;
-        historyHTML += "</tr>";
+      const headers = ['Reset Date', 'Was Member', 'Paid Dues', 'Reason', 'Name at Reset', 'Email at Reset', 'Discord at Reset'];
+      headers.forEach(headerText => {
+        const th = document.createElement('th');
+        th.textContent = headerText;
+        headerRow.appendChild(th);
       });
 
-      historyHTML += "</tbody></table>";
-      historyContainer.innerHTML = historyHTML;
+      thead.appendChild(headerRow);
+      table.appendChild(thead);
+
+      // Create tbody
+      const tbody = document.createElement('tbody');
+
+      history.forEach((record) => {
+        const row = document.createElement('tr');
+
+        // Reset Date
+        const dateCell = document.createElement('td');
+        dateCell.textContent = new Date(record.reset_date).toLocaleString();
+        row.appendChild(dateCell);
+
+        // Was Member
+        const memberCell = document.createElement('td');
+        memberCell.textContent = record.was_full_member ? "✔️" : "❌";
+        row.appendChild(memberCell);
+
+        // Paid Dues
+        const duesCell = document.createElement('td');
+        duesCell.textContent = record.had_paid_dues ? "✔️" : "❌";
+        row.appendChild(duesCell);
+
+        // Reason
+        const reasonCell = document.createElement('td');
+        reasonCell.textContent = record.reset_reason;
+        row.appendChild(reasonCell);
+
+        // Name at Reset
+        const nameCell = document.createElement('td');
+        nameCell.textContent = `${record.first_name_snapshot} ${record.surname_snapshot}`;
+        row.appendChild(nameCell);
+
+        // Email at Reset
+        const emailCell = document.createElement('td');
+        emailCell.textContent = record.email_snapshot || "N/A";
+        row.appendChild(emailCell);
+
+        // Discord at Reset
+        const discordCell = document.createElement('td');
+        discordCell.textContent = record.discord_username_snapshot || "N/A";
+        row.appendChild(discordCell);
+
+        tbody.appendChild(row);
+      });
+
+      table.appendChild(tbody);
+      historyContainer.appendChild(table);
     })
     .catch((error) => {
       console.error("Error loading membership history:", error);
-      historyContainer.innerHTML = "<p>Error loading membership history.</p>";
+      historyContainer.innerHTML = '';
+      const errorP = document.createElement('p');
+      errorP.textContent = 'Error loading membership history.';
+      historyContainer.appendChild(errorP);
     });
 }
 
@@ -567,9 +617,11 @@ async function checkDiscordAccount() {
 
   // Validate Discord ID format
   if (!/^[0-9]{17,20}$/.test(discordId)) {
-    resultsDiv.innerHTML = `
-      <div class="error">Invalid Discord ID format. Must be 17-20 digits.</div>
-    `;
+    const errorDiv = document.createElement('div');
+    errorDiv.className = 'error';
+    errorDiv.textContent = 'Invalid Discord ID format. Must be 17-20 digits.';
+    resultsDiv.innerHTML = '';
+    resultsDiv.appendChild(errorDiv);
     document.getElementById("migrationSubmit").disabled = true;
     return;
   }
@@ -583,38 +635,100 @@ async function checkDiscordAccount() {
       const data = await response.json();
       const user = data.data;
 
-      resultsDiv.innerHTML = `
-        <div class="account-found">
-          <h4>✅ Account Found</h4>
-          <p><strong>Discord Username:</strong> ${user.discord?.username || "Unknown"}</p>
-          <p><strong>Name:</strong> ${user.first_name || "Not set"} ${user.surname || ""}</p>
-          <p><strong>Email:</strong> ${user.email || "Not set"}</p>
-          <p><strong>Is Member:</strong> ${user.is_full_member ? "Yes" : "No"}</p>
-          <p><strong>Join Date:</strong> ${user.join_date || "Not set"}</p>
-          ${
-            !user.first_name || !user.surname || !user.email
-              ? '<p class="warning">⚠️ This appears to be a new/temporary account with minimal data</p>'
-              : '<p class="warning">⚠️ This account has significant data that will be lost</p>'
-          }
-        </div>
-      `;
+      // Create account found div
+      const accountDiv = document.createElement('div');
+      accountDiv.className = 'account-found';
+
+      // Create and append header
+      const header = document.createElement('h4');
+      header.textContent = '✅ Account Found';
+      accountDiv.appendChild(header);
+
+      // Discord Username
+      const discordP = document.createElement('p');
+      const discordStrong = document.createElement('strong');
+      discordStrong.textContent = 'Discord Username:';
+      discordP.appendChild(discordStrong);
+      discordP.appendChild(document.createTextNode(' ' + (user.discord?.username || "Unknown")));
+      accountDiv.appendChild(discordP);
+
+      // Name
+      const nameP = document.createElement('p');
+      const nameStrong = document.createElement('strong');
+      nameStrong.textContent = 'Name:';
+      nameP.appendChild(nameStrong);
+      nameP.appendChild(document.createTextNode(' ' + (user.first_name || "Not set") + ' ' + (user.surname || "")));
+      accountDiv.appendChild(nameP);
+
+      // Email
+      const emailP = document.createElement('p');
+      const emailStrong = document.createElement('strong');
+      emailStrong.textContent = 'Email:';
+      emailP.appendChild(emailStrong);
+      emailP.appendChild(document.createTextNode(' ' + (user.email || "Not set")));
+      accountDiv.appendChild(emailP);
+
+      // Is Member
+      const memberP = document.createElement('p');
+      const memberStrong = document.createElement('strong');
+      memberStrong.textContent = 'Is Member:';
+      memberP.appendChild(memberStrong);
+      memberP.appendChild(document.createTextNode(' ' + (user.is_full_member ? "Yes" : "No")));
+      accountDiv.appendChild(memberP);
+
+      // Join Date
+      const joinP = document.createElement('p');
+      const joinStrong = document.createElement('strong');
+      joinStrong.textContent = 'Join Date:';
+      joinP.appendChild(joinStrong);
+      joinP.appendChild(document.createTextNode(' ' + (user.join_date || "Not set")));
+      accountDiv.appendChild(joinP);
+
+      // Warning message
+      const warningP = document.createElement('p');
+      warningP.className = 'warning';
+      if (!user.first_name || !user.surname || !user.email) {
+        warningP.textContent = '⚠️ This appears to be a new/temporary account with minimal data';
+      } else {
+        warningP.textContent = '⚠️ This account has significant data that will be lost';
+      }
+      accountDiv.appendChild(warningP);
+
+      // Clear and append
+      resultsDiv.innerHTML = '';
+      resultsDiv.appendChild(accountDiv);
 
       // Enable migration button
       document.getElementById("migrationSubmit").disabled = false;
     } else {
-      resultsDiv.innerHTML = `
-        <div class="account-not-found">
-          <h4>❌ No Account Found</h4>
-          <p>No user account exists with Discord ID: ${discordId}</p>
-          <p>The user must create an account with this Discord ID first.</p>
-        </div>
-      `;
+      // Create account not found div
+      const notFoundDiv = document.createElement('div');
+      notFoundDiv.className = 'account-not-found';
+
+      const header = document.createElement('h4');
+      header.textContent = '❌ No Account Found';
+      notFoundDiv.appendChild(header);
+
+      const p1 = document.createElement('p');
+      p1.textContent = 'No user account exists with Discord ID: ' + discordId;
+      notFoundDiv.appendChild(p1);
+
+      const p2 = document.createElement('p');
+      p2.textContent = 'The user must create an account with this Discord ID first.';
+      notFoundDiv.appendChild(p2);
+
+      resultsDiv.innerHTML = '';
+      resultsDiv.appendChild(notFoundDiv);
 
       // Disable migration button
       document.getElementById("migrationSubmit").disabled = true;
     }
   } catch (error) {
-    resultsDiv.innerHTML = `<div class="error">Error checking account: ${error.message}</div>`;
+    const errorDiv = document.createElement('div');
+    errorDiv.className = 'error';
+    errorDiv.textContent = 'Error checking account: ' + error.message;
+    resultsDiv.innerHTML = '';
+    resultsDiv.appendChild(errorDiv);
     document.getElementById("migrationSubmit").disabled = true;
   }
 }
@@ -656,15 +770,42 @@ document.addEventListener("DOMContentLoaded", function () {
         const result = await response.json();
 
         if (response.ok && result.success) {
-          document.getElementById("migrationResults").innerHTML = `
-            <div class="success">
-              <h4>✅ Migration Successful</h4>
-              <p>${result.message}</p>
-              <p><strong>Old Discord ID:</strong> ${result.old_discord_id}</p>
-              <p><strong>New Discord ID:</strong> ${result.new_discord_id}</p>
-              <p><strong>New Username:</strong> ${result.new_discord_username}</p>
-            </div>
-          `;
+          // Create success div
+          const successDiv = document.createElement('div');
+          successDiv.className = 'success';
+
+          const header = document.createElement('h4');
+          header.textContent = '✅ Migration Successful';
+          successDiv.appendChild(header);
+
+          const messageP = document.createElement('p');
+          messageP.textContent = result.message;
+          successDiv.appendChild(messageP);
+
+          const oldIdP = document.createElement('p');
+          const oldIdStrong = document.createElement('strong');
+          oldIdStrong.textContent = 'Old Discord ID:';
+          oldIdP.appendChild(oldIdStrong);
+          oldIdP.appendChild(document.createTextNode(' ' + result.old_discord_id));
+          successDiv.appendChild(oldIdP);
+
+          const newIdP = document.createElement('p');
+          const newIdStrong = document.createElement('strong');
+          newIdStrong.textContent = 'New Discord ID:';
+          newIdP.appendChild(newIdStrong);
+          newIdP.appendChild(document.createTextNode(' ' + result.new_discord_id));
+          successDiv.appendChild(newIdP);
+
+          const usernameP = document.createElement('p');
+          const usernameStrong = document.createElement('strong');
+          usernameStrong.textContent = 'New Username:';
+          usernameP.appendChild(usernameStrong);
+          usernameP.appendChild(document.createTextNode(' ' + result.new_discord_username));
+          successDiv.appendChild(usernameP);
+
+          const resultsContainer = document.getElementById("migrationResults");
+          resultsContainer.innerHTML = '';
+          resultsContainer.appendChild(successDiv);
 
           // Refresh the user data after a delay
           setTimeout(() => {
@@ -677,8 +818,12 @@ document.addEventListener("DOMContentLoaded", function () {
           );
         }
       } catch (error) {
-        document.getElementById("migrationResults").innerHTML =
-          `<div class="error">Migration failed: ${error.message}</div>`;
+        const errorDiv = document.createElement('div');
+        errorDiv.className = 'error';
+        errorDiv.textContent = 'Migration failed: ' + error.message;
+        const resultsContainer = document.getElementById("migrationResults");
+        resultsContainer.innerHTML = '';
+        resultsContainer.appendChild(errorDiv);
       }
     });
   }

@@ -29,14 +29,10 @@ for (let i = 0; i < checkboxes.length; i++) {
   };
 }
 
-// Custom auto-dismissing banner system.else
-function banner(str, trusted) {
+// Custom auto-dismissing banner system.
+function banner(str) {
   let el = document.createElement("div");
-
-  // Decide if we want to insert HTML or not.
-  if (trusted) el.innerHTML = str;
-  else el.innerText = str;
-
+  el.innerText = str;
   el.classList = "banner_vanishing";
   el.style.opacity = 0;
   document.body.prepend(el);
