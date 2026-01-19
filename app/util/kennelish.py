@@ -1,6 +1,7 @@
 # SPDX-License-Identifier: MIT
 # Copyright (c) 2024 Collegiate Cyber Defense Club
 import logging
+from html import escape
 from typing import Literal
 
 from pydantic import constr, create_model
@@ -61,17 +62,22 @@ class Kennelish:
         return output
 
     def label(entry, innerHtml):
+        # Labels and captions are admin-controlled, don't escape (may contain HTML links)
         text = f"<h3>{entry.get('label', '')}</h3>"
         text += f"<h4>{entry.get('caption', '')}</h4>"
         return f"<div class='entry'><div>{text}</div><div>{innerHtml}</div></div>"
 
     def header(entry, user_data=None, tag="h1"):
+        # Labels are admin-controlled, don't escape
         output = f"<{tag}>{entry.get('label', '')}</{tag}>"
         output += Kennelish.parse(entry.get("elements", []), user_data)
         return output
 
     def signature(entry, user_data=None):
-        output = f"<div name='{entry.get('key')}' class='signature'>By submitting this form, you, {user_data.get('first_name', 'HackUCF Member #' + str(user_data.get('id')))} {user_data.get('surname', '')}, agree to the above terms. This form will be time-stamped. By submitting this form, you acknowledge that your submission constitutes a digital signature, which is legally binding and has the same effect as your handwritten signature. This digital signature confirms your consent to the terms and conditions outlined in this document and your agreement to conduct this transaction electronically.</div>"
+        first = escape(user_data.get("first_name", "HackUCF Member #" + str(user_data.get("id"))))
+        last = escape(user_data.get("surname", ""))
+        key = escape(entry.get('key', ''))
+        output = f"<div name='{key}' class='signature'>By submitting this form, you, {first} {last}, agree to the above terms. This form will be time-stamped. By submitting this form, you acknowledge that your submission constitutes a digital signature, which is legally binding and has the same effect as your handwritten signature. This digital signature confirms your consent to the terms and conditions outlined in this document and your agreement to conduct this transaction electronically.</div>"
         return output
 
     def text(entry, user_data=None, inp_type="text"):
@@ -93,13 +99,15 @@ class Kennelish:
 
         regex_pattern = " "
         if inp_type == "email" and entry.get("domain", False):
-            regex_pattern = ' pattern="([A-Za-z0-9.-_+]+)@' + entry.get("domain") + '"'
+            regex_pattern = ' pattern="([A-Za-z0-9.-_+]+)@' + escape(entry.get("domain")) + '"'
         elif inp_type == "email":
             regex_pattern = ' pattern="([A-Za-z0-9.-_+]+)@[A-Za-z0-9-]+(.[A-Za-z-]{2,})"'
         elif inp_type == "nid":
             regex_pattern = ' pattern="^([a-z]{2}[0-9]{6})$"'
 
-        output = f"<input class='kennelish_input'{' required' if entry.get('required') else ' '}{regex_pattern} name='{entry.get('key', '')}' type='{'text' if inp_type == 'nid' else inp_type}' value='{prefill}' placeholder='{entry.get('label', '')}' />"
+        # Escape: prefill (user data), key (attribute safety)
+        # Don't escape: label/placeholder (admin config, but goes in attribute so escape for safety)
+        output = f"<input class='kennelish_input'{' required' if entry.get('required') else ' '}{regex_pattern} name='{escape(entry.get('key', ''))}' type='{'text' if inp_type == 'nid' else inp_type}' value='{escape(str(prefill))}' placeholder='{escape(entry.get('label', ''))}' />"
         return Kennelish.label(entry, output)
 
     def radio(entry, user_data=None):
@@ -113,23 +121,35 @@ class Kennelish:
         else:
             prefill = ""
 
-        output = f"<fieldset name='{entry.get('key', '')}'{' required' if entry.get('required') else ' '} class='kennelish_input radio'>"
+        # Escape keys in attributes, but options are admin config (don't escape in label text)
+        key = escape(entry.get('key', ''))
+        key_id = entry.get('key', '').replace('.', '_').replace(' ', '_')
+        output = f"<fieldset name='{key}'{' required' if entry.get('required') else ' '} class='kennelish_input radio'>"
         for option in entry["options"]:
             selected = "" if option != prefill else "checked"
-            output += f"<div><input type='radio' {selected} name='{entry.get('key', '')}' id='radio_{entry.get('key', '').replace('.', '_').replace(' ', '_')}_{option}' value='{option}'><label for='radio_{entry.get('key', '').replace('.', '_').replace(' ', '_')}_{option}'>{option}</label></div>"
+            option_escaped = escape(str(option))  # Escape for attribute safety
+            option_id = str(option).replace('.', '_').replace(' ', '_')
+            # Use escaped option in value attribute, but unescaped in label text (admin config)
+            output += f"<div><input type='radio' {selected} name='{key}' id='radio_{key_id}_{option_id}' value='{option_escaped}'><label for='radio_{key_id}_{option_id}'>{option}</label></div>"
         output += "</fieldset>"
         return Kennelish.label(entry, output)
 
     def checkbox(entry, user_data=None):
         # Checkboxes do not support pre-filling!
 
-        output = f"<fieldset name='{entry.get('key', '')}'{' required' if entry.get('required') else ' '} class='kennelish_input checkbox'>"
+        # Escape keys in attributes, but options are admin config (don't escape in label text)
+        key = escape(entry.get('key', ''))
+        key_id = entry.get('key', '').replace('.', '_').replace(' ', '_')
+        output = f"<fieldset name='{key}'{' required' if entry.get('required') else ' '} class='kennelish_input checkbox'>"
         for option in entry.get("options"):
-            output += f"<div><input type='checkbox' name='{entry.get('key', '')}' id='checkbox_{entry.get('key', '').replace('.', '_').replace(' ', '_')}_{option}' value='{option}'><label for='checkbox_{entry.get('key', '').replace('.', '_').replace(' ', '_')}_{option}'>{option}</label></div>"
+            option_escaped = escape(str(option))  # Escape for attribute safety
+            option_id = str(option).replace('.', '_').replace(' ', '_')
+            # Use escaped option in value attribute, but unescaped in label text (admin config)
+            output += f"<div><input type='checkbox' name='{key}' id='checkbox_{key_id}_{option_id}' value='{option_escaped}'><label for='checkbox_{key_id}_{option_id}'>{option}</label></div>"
 
         # Other
-        output += f"<div><input type='checkbox' name='{entry.get('key', '')}' id='checkbox_{entry.get('key', '').replace('.', '_').replace(' ', '_')}_OTHER' value='_other'><label for='checkbox_{entry.get('key', '').replace('.', '_').replace(' ', '_')}_OTHER'>Other</label></div>"
-        output += f"<input id='{entry.get('key', '').replace('.', '_').replace(' ', '_')}' class='other_checkbox' type='text' placeholder='{entry.get('label', 'Other')}...'>"
+        output += f"<div><input type='checkbox' name='{key}' id='checkbox_{key_id}_OTHER' value='_other'><label for='checkbox_{key_id}_OTHER'>Other</label></div>"
+        output += f"<input id='{key_id}' class='other_checkbox' type='text' placeholder='{escape(entry.get('label', 'Other'))}...'>"
         output += "</fieldset>"
         return Kennelish.label(entry, output)
 
@@ -142,12 +162,17 @@ class Kennelish:
         else:
             prefill = "_default"
 
-        output = f"<select class='kennelish_input'{' required' if entry.get('required') else ' '} name='{entry.get('key', '')}'><option disabled {'selected ' if prefill == '_default' else ''}value='_default'>Select...</option>"
+        # Escape keys in attributes, but options are admin config (don't escape in option text)
+        key = escape(entry.get('key', ''))
+        key_id = entry.get('key', '').replace('.', '_').replace(' ', '_')
+        output = f"<select class='kennelish_input'{' required' if entry.get('required') else ' '} name='{key}'><option disabled {'selected ' if prefill == '_default' else ''}value='_default'>Select...</option>"
         for option in entry.get("options"):
-            output += f"<option {'selected ' if prefill == option else ''}value='{option}'>{option}</option>"
+            option_escaped = escape(str(option))  # Escape for attribute safety
+            # Use escaped option in value attribute, but unescaped in option text (admin config)
+            output += f"<option {'selected ' if prefill == option else ''}value='{option_escaped}'>{option}</option>"
 
         if entry.get("other"):
-            output += f"<option value='_other'>Other</option></select><input id='{entry.get('key', '').replace('.', '_').replace(' ', '_')}' class='other_dropdown' type='text' placeholder='{entry.get('label', 'Other')}...'>"
+            output += f"<option value='_other'>Other</option></select><input id='{key_id}' class='other_dropdown' type='text' placeholder='{escape(entry.get('label', 'Other'))}...'>"
         else:
             output += "</select>"
         return Kennelish.label(entry, output)
@@ -161,28 +186,37 @@ class Kennelish:
         else:
             prefill = ""
 
+        # Labels are admin config, but in content so don't escape
         novice_label = entry.get("novice_label", "Novice")
         expert_label = entry.get("expert_label", "Expert")
 
+        # Escape key in attributes
+        key = escape(entry.get('key', ''))
+        key_id = entry.get('key', '').replace('.', '_').replace(' ', '_')
         output = f"<span class='caption'>{novice_label}</span><span class='right caption'>{expert_label}</span><br>"
-        output += f"<fieldset name='{entry.get('key', '')}'{' required' if entry.get('required') else ' '} class='kennelish_input radio gridded'>"
+        output += f"<fieldset name='{key}'{' required' if entry.get('required') else ' '} class='kennelish_input radio gridded'>"
         for option in range(1, 6):
             selected = "" if option != prefill else "checked"
-            output += f"<div><input type='radio' {selected} name='{entry.get('key', '')}' id='radio_{entry.get('key', '').replace('.', '_').replace(' ', '_')}_{option}' value='{option}'><label for='radio_{entry.get('key', '').replace('.', '_').replace(' ', '_')}_{option}'>{option}</label></div>"
+            output += f"<div><input type='radio' {selected} name='{key}' id='radio_{key_id}_{option}' value='{option}'><label for='radio_{key_id}_{option}'>{option}</label></div>"
         output += "</fieldset>"
         return Kennelish.label(entry, output)
 
     def navigation(entry):
         if entry.get("prev"):
             # back = f"<a class='btn wide grey' href='{entry.get('prev', '#')}'>{entry.get('prev_label', 'Back')}</a>"
-            back = f"<button type='button' class='btn wide grey' onclick='submit_and_nav(\"{entry.get('prev', '#')}\")'>{entry.get('prev_label', 'Back')}</button>"
+            # Escape URLs in attributes for safety, but labels are admin config (don't escape)
+            prev_url = escape(entry.get('prev', '#')).replace('"', '&quot;')
+            prev_label = entry.get('prev_label', 'Back')
+            back = f"<button type='button' class='btn wide grey' onclick='submit_and_nav(\"{prev_url}\")'>{prev_label}</button>"
         else:
             back = ""
-        forward = f"<button type='button' class='btn wide' onclick='submit_and_nav(\"{entry.get('next', '#')}\")'>{entry.get('next_label', 'Next')}</button>"
+        next_url = escape(entry.get('next', '#')).replace('"', '&quot;')
+        next_label = entry.get('next_label', 'Next')
+        forward = f"<button type='button' class='btn wide' onclick='submit_and_nav(\"{next_url}\")'>{next_label}</button>"
         return f"<div class='entry'><div>{back}</div><div>{forward}</div></div>"
 
     def invalid(entry):
-        return f"<h3 class='invalid'>Invalid Input: {entry['input']}</h3>"
+        return f"<h3 class='invalid'>Invalid Input: {escape(str(entry.get('input', 'Unknown')))}</h3>"
 
 
 class Transformer:
