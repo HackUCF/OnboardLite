@@ -298,7 +298,7 @@ async def admin_list_csv(
             user_dict.get("class_standing"),
             user_dict.get("shirt_size"),
             user_dict.get("discord", {}).get("username"),
-            user_dict.get("discord", {}).get("id"),
+            user_dict.get("discord_id"),
             user_dict.get("experience"),
             user_dict.get("curiosity"),
             user_dict.get("attending"),
