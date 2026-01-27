@@ -129,12 +129,17 @@ function showTable() {
 }
 
 function showQR() {
-  qrScanner.start();
-
-  const camLS = localStorage.getItem("adminCam");
-  if (camLS && typeof camLS !== "undefined") {
-    qrScanner.setCamera(camLS);
-  }
+  qrScanner.start().then(() => {
+    const camLS = localStorage.getItem("adminCam");
+    if (camLS && typeof camLS !== "undefined") {
+      QrScanner.listCameras(true).then(cameras => {
+        const cameraExists = cameras.some(cam => cam.id === camLS);
+        if (cameraExists) {
+          qrScanner.setCamera(camLS);
+        }
+      });
+    }
+  });
 
   document.getElementById("user").style.display = "none";
   document.getElementById("users").style.display = "none";
@@ -508,18 +513,31 @@ function logoff() {
 }
 
 function changeCamera() {
-  QrScanner.listCameras().then((evt) => {
-    const cameras = evt;
-    let camArray = [];
-    let camString = "Please enter a camera number:";
-    for (let i = 0; i < cameras.length; i++) {
-      camString += `\n${i}: ${cameras[i].label}`;
-      camArray.push(cameras[i].id);
+  QrScanner.listCameras().then((cameras) => {
+    if (cameras.length <= 1) {
+      alert('Only one camera available');
+      return;
     }
-    let camSelect = prompt(camString);
 
-    localStorage.setItem("adminCam", camArray[camSelect]);
-    qrScanner.setCamera(camArray[camSelect]);
+    let currentCameraId = localStorage.getItem("adminCam");
+    let currentIndex = -1;
+
+    if (currentCameraId) {
+      currentIndex = cameras.findIndex(c => c.id === currentCameraId);
+    }
+
+    if (currentIndex === -1) {
+      currentIndex = 0;
+    }
+
+    const nextIndex = (currentIndex + 1) % cameras.length;
+    const nextCamera = cameras[nextIndex];
+
+    localStorage.setItem("adminCam", nextCamera.id);
+    qrScanner.setCamera(nextCamera.id);
+  }).catch(error => {
+    console.error('Error switching camera:', error);
+    alert('Error switching camera.');
   });
 }
 
