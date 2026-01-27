@@ -224,7 +224,7 @@ OnboardLite uses a custom form system called Kennelish (inspired by Sileo Native
 ]
 ```
 
-Forms are stored in `forms/` and rendered dynamically. 
+Forms are stored in `forms/` and rendered dynamically.
 
 ## API Usage
 

@@ -364,7 +364,7 @@ document.addEventListener("DOMContentLoaded", function() {
     const logoffBtn = document.getElementById("logoff-btn");
     if (logoffBtn) {
         logoffBtn.addEventListener("click", function(e) {
-            e.preventDefault(); 
+            e.preventDefault();
             logoff();
         });
     }
