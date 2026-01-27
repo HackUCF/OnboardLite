@@ -342,3 +342,30 @@ window.onload = (evt) => {
       // Do stuff if not on Infra
     });
 };
+
+document.addEventListener("DOMContentLoaded", function() {
+    // Dismiss alerts
+    const closeBtns = document.querySelectorAll(".dismiss-alert");
+    closeBtns.forEach(btn => {
+        btn.addEventListener("click", function() {
+            this.parentElement.style.display = 'none';
+        });
+    });
+
+    // Skip button in pay.html
+    const skipBtn = document.getElementById("skip-btn");
+    if (skipBtn) {
+        skipBtn.addEventListener("click", function() {
+            nav_to('/final');
+        });
+    }
+
+    // Logoff button in profile.html
+    const logoffBtn = document.getElementById("logoff-btn");
+    if (logoffBtn) {
+        logoffBtn.addEventListener("click", function(e) {
+            e.preventDefault(); 
+            logoff();
+        });
+    }
+});

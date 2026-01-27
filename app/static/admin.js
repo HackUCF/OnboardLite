@@ -57,7 +57,7 @@ function load() {
           nid: sanitizeHTML(member.nid),
           experience: sanitizeHTML(member.experience),
           major: sanitizeHTML(member.major),
-          details: `<button class="searchbtn btn" onclick="showUser('${sickoModeSanitize(member.id)}')">Details</a>`,
+          details: `<button class="searchbtn btn view-user-details" data-userid="${sickoModeSanitize(member.id)}">Details</button>`,
           is_full_member: Boolean(member.is_full_member),
         };
 
@@ -845,4 +845,27 @@ document.addEventListener("DOMContentLoaded", function () {
       }
     });
   }
+});
+
+document.addEventListener("DOMContentLoaded", function() {
+    // Delegation for dynamic table buttons
+    document.querySelector('tbody.list').addEventListener('click', function(e) {
+        if (e.target && e.target.closest('.view-user-details')) {
+            const btn = e.target.closest('.view-user-details');
+            const userId = btn.getAttribute('data-userid');
+            showUser(userId);
+        }
+    });
+
+    // Check Discord Button
+    const checkDiscordBtn = document.getElementById("check-discord-btn");
+    if (checkDiscordBtn) {
+        checkDiscordBtn.addEventListener("click", checkDiscordAccount);
+    }
+
+    // Close Migration Modal buttons
+    const closeMigrationBtns = document.querySelectorAll(".close-migration-modal");
+    closeMigrationBtns.forEach(btn => {
+        btn.addEventListener("click", closeMigrationModal);
+    });
 });

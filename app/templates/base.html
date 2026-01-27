@@ -29,16 +29,12 @@
     />
 
     {% if sentry_url is not none %}
+    <meta name="sentry-dsn" content="{{ sentry_url }}">
     <script
       src="https://browser.sentry-cdn.com/8.24.0/bundle.min.js"
       crossorigin="anonymous"
     ></script>
-    <script>
-      Sentry.init({
-        dsn: "{{ sentry_url }}",
-        tracesSampleRate: 0.01,
-      });
-    </script>
+    <script src="/static/sentry_init.js"></script>
     {% endif %} {% block head %} {% endblock %}
   </head>
 

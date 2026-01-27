@@ -211,7 +211,7 @@
 <!-- Discord Migration Modal -->
 <div id="migrationModal" class="modal">
   <div class="modal-content">
-    <span class="close" onclick="closeMigrationModal()">&times;</span>
+    <span class="close close-migration-modal">&times;</span>
 
     <h2>⚠️ Discord Account Migration</h2>
 
@@ -257,7 +257,7 @@
       <div class="form-actions">
         <button
           type="button"
-          onclick="checkDiscordAccount()"
+          id="check-discord-btn"
           class="btn btn-primary"
         >
           Check Discord Account
@@ -272,8 +272,7 @@
         </button>
         <button
           type="button"
-          onclick="closeMigrationModal()"
-          class="btn btn-secondary"
+          class="btn btn-secondary close-migration-modal"
         >
           Cancel
         </button>
