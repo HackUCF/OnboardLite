@@ -191,11 +191,7 @@ document.addEventListener("contextmenu", function (e) {
 });
 
 // Initialize when page loads
-<<<<<<< HEAD
 window.addEventListener("load", function () {
-=======
-window.addEventListener('load', function() {
->>>>>>> 0d3536d (Move away from inline scripts)
   initScanner();
 });
 
