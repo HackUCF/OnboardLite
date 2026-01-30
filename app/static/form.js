@@ -368,4 +368,21 @@ document.addEventListener("DOMContentLoaded", function() {
             logoff();
         });
     }
+
+    // Navigation buttons (Next/Cancel)
+    const nextBtn = document.getElementById("next-btn");
+    if (nextBtn) {
+        nextBtn.addEventListener("click", function() {
+            const targetUrl = this.getAttribute("data-nav-url");
+            submit_and_nav(targetUrl);
+        });
+    }
+
+    const cancelBtn = document.getElementById("cancel-btn");
+    if (cancelBtn) {
+        cancelBtn.addEventListener("click", function() {
+            const targetUrl = this.getAttribute("data-nav-url");
+            submit_and_nav(targetUrl);
+        });
+    }
 });

@@ -207,12 +207,12 @@ class Kennelish:
             # Escape URLs in attributes for safety, but labels are admin config (don't escape)
             prev_url = escape(entry.get("prev", "#")).replace('"', "&quot;")
             prev_label = entry.get("prev_label", "Back")
-            back = f"<button type='button' class='btn wide grey' onclick='submit_and_nav(\"{prev_url}\")'>{prev_label}</button>"
+            back = f"<button type='button' class='btn wide grey' id='cancel-btn' data-nav-url='{prev_url}'>{prev_label}</button>"
         else:
             back = ""
         next_url = escape(entry.get("next", "#")).replace('"', "&quot;")
         next_label = entry.get("next_label", "Next")
-        forward = f"<button type='button' class='btn wide' onclick='submit_and_nav(\"{next_url}\")'>{next_label}</button>"
+        forward = f"<button type='button' class='btn wide' id='next-btn' data-nav-url='{next_url}'>{next_label}</button>"
         return f"<div class='entry'><div>{back}</div><div>{forward}</div></div>"
 
     def invalid(entry):
