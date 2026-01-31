@@ -74,5 +74,10 @@ api_keys:
   #   created: "2024-01-15T00:00:00Z"
 
 security:
-  csrf_check_enable: true
-  csrf_failure_action: "exception" # Options: "block", "exception", "log"
+  # Origins that are explicitly allowed to make cross-site requests
+  trusted_origins: []
+    # - "https://sub.example.com"
+  
+  # Path prefixes that skip CSRF checks (e.g. external webhooks)
+  bypass_paths: []
+    # - "/api/stripe/webhook"
