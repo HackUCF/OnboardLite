@@ -35,6 +35,7 @@ from app.util.approve import Approve
 
 # Import middleware
 from app.util.auth_dependencies import Authentication, CurrentMember, sign_redirect_url, verify_redirect_url
+from app.util.csrf import CSRFMiddleware
 from app.util.database import engine, get_session, init_db
 from app.util.discord import Discord
 
@@ -107,6 +108,7 @@ def update_discord_model_for_existing_user(user_id: str, discord_data: dict):
 
 # Initiate FastAPI.
 app = FastAPI()
+app.add_middleware(CSRFMiddleware)
 templates = Jinja2Templates(directory="app/templates")
 
 
