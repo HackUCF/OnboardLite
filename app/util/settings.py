@@ -408,6 +408,27 @@ else:
     api_keys_config = []
 
 
+class SecurityConfig(BaseModel):
+    """
+    Configuration for security features.
+
+    Attributes:
+        trusted_origins (List[str]): List of origins to allow (e.g. "https://sub.example.com").
+        bypass_paths (List[str]): List of path prefixes to bypass CSRF checks (e.g. "/api/webhooks").
+    """
+
+    trusted_origins: List[str] = Field(default_factory=list)
+    bypass_paths: List[str] = Field(default_factory=list)
+
+
+if settings.get("security"):
+    security_config = SecurityConfig(**settings["security"])
+elif onboard_env == "dev":
+    security_config = SecurityConfig(trusted_origins=[], bypass_paths=["/docs", "/openapi.json"])
+else:
+    security_config = SecurityConfig()
+
+
 class SingletonBaseSettingsMeta(type(BaseSettings), type):
     _instances = {}
 
@@ -429,6 +450,7 @@ class Settings(BaseSettings, metaclass=SingletonBaseSettingsMeta):
     google_wallet: GoogleWalletConfig = google_wallet_config
     telemetry: Optional[TelemetryConfig] = telemetry_config
     apple_wallet: AppleWalletConfig = apple_wallet_config
+    security: SecurityConfig = security_config
     api_keys: List[ApiKeyConfig] = api_keys_config
     env: Optional[str] = onboard_env
     loglevel: Optional[str] = loglevel
