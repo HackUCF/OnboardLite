@@ -1,172 +1,6 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2024 Collegiate Cyber Defense Club
 
-// ---------------------------------------------------------------------------
-// MiniQrScanner — thin wrapper around BarcodeDetector + zxing-wasm fallback.
-// API surface used by admin.js: start(), stop(), setCamera(deviceId)
-// Static: MiniQrScanner.listCameras() => Promise<{id, label}[]>
-// ---------------------------------------------------------------------------
-class MiniQrScanner {
-  constructor(videoElem, onResult) {
-    this._video = videoElem;
-    this._onResult = onResult;
-    this._stream = null;
-    this._rafId = null;
-    this._active = false;
-    this._detect = null; // set on first start()
-
-    // offscreen canvas for frame snapshots
-    this._canvas = document.createElement("canvas");
-    this._ctx = this._canvas.getContext("2d", { willReadFrequently: true });
-  }
-
-  // Build the detection function once, reuse thereafter
-  async _buildDetector() {
-    if (this._detect) return;
-
-    if ("BarcodeDetector" in window) {
-      const supported = await BarcodeDetector.getSupportedFormats();
-      if (supported.includes("qr_code")) {
-        const detector = new BarcodeDetector({ formats: ["qr_code"] });
-        this._detect = async (imageData) => {
-          const results = await detector.detect(imageData);
-          return results.length > 0 ? results[0].rawValue : null;
-        };
-        return;
-      }
-    }
-
-    // zxing-wasm IIFE fallback (loaded via <script> in the template)
-    if (typeof ZXingWASM === "undefined") {
-      throw new Error("ZXingWASM not loaded");
-    }
-    ZXingWASM.prepareZXingModule({
-      overrides: {
-        locateFile: (path, prefix) => {
-          if (path.endsWith(".wasm")) {
-            return `https://cdn.jsdelivr.net/npm/zxing-wasm@3.0.0/dist/reader/${path}`;
-          }
-          return prefix + path;
-        },
-      },
-    });
-    this._detect = async (imageData) => {
-      const results = await ZXingWASM.readBarcodes(imageData, {
-        formats: ["QRCode"],
-        maxNumberOfSymbols: 1,
-        tryHarder: false,
-      });
-      return results.length > 0 ? results[0].text : null;
-    };
-  }
-
-  async _startStream(deviceId) {
-    if (this._stream) {
-      this._stream.getTracks().forEach((t) => t.stop());
-    }
-    if (deviceId) {
-      try {
-        this._stream = await navigator.mediaDevices.getUserMedia({
-          video: { deviceId: { exact: deviceId } },
-        });
-      } catch (err) {
-        if (
-          err.name === "OverconstrainedError" ||
-          err.name === "NotFoundError"
-        ) {
-          // Saved device ID is stale — clear it and fall back to default
-          localStorage.removeItem("adminCam");
-          this._stream = await navigator.mediaDevices.getUserMedia({
-            video: { facingMode: { ideal: "environment" } },
-          });
-        } else {
-          throw err;
-        }
-      }
-    } else {
-      this._stream = await navigator.mediaDevices.getUserMedia({
-        video: { facingMode: { ideal: "environment" } },
-      });
-    }
-    this._video.srcObject = this._stream;
-    await this._video.play();
-  }
-
-  _getActiveDeviceId() {
-    if (!this._stream) return null;
-    const track = this._stream.getVideoTracks()[0];
-    return track ? track.getSettings().deviceId : null;
-  }
-
-  _scheduleFrame() {
-    this._rafId = requestAnimationFrame(() => this._scanFrame());
-  }
-
-  async _scanFrame() {
-    if (!this._active) return;
-    const v = this._video;
-    if (v.readyState >= v.HAVE_ENOUGH_DATA) {
-      this._canvas.width = v.videoWidth;
-      this._canvas.height = v.videoHeight;
-      this._ctx.drawImage(v, 0, 0);
-      try {
-        const imageData = this._ctx.getImageData(
-          0,
-          0,
-          this._canvas.width,
-          this._canvas.height,
-        );
-        const value = await this._detect(imageData);
-        if (value) {
-          this._active = false;
-          this._onResult({ data: value });
-          return; // caller must call start() again to resume
-        }
-      } catch (err) {
-        console.error("MiniQrScanner scan error:", err);
-      }
-    }
-    this._scheduleFrame();
-  }
-
-  async start(deviceId) {
-    await this._buildDetector();
-    await this._startStream(deviceId || null);
-    this._active = true;
-    this._scheduleFrame();
-  }
-
-  stop() {
-    this._active = false;
-    cancelAnimationFrame(this._rafId);
-    if (this._stream) {
-      this._stream.getTracks().forEach((t) => t.stop());
-      this._stream = null;
-    }
-    this._video.srcObject = null;
-  }
-
-  async setCamera(deviceId) {
-    const wasActive = this._active;
-    this._active = false;
-    cancelAnimationFrame(this._rafId);
-    await this._startStream(deviceId);
-    if (wasActive) {
-      this._active = true;
-      this._scheduleFrame();
-    }
-  }
-
-  static async listCameras() {
-    const devices = await navigator.mediaDevices.enumerateDevices();
-    return devices
-      .filter((d) => d.kind === "videoinput")
-      .map((d) => ({ id: d.deviceId, label: d.label }));
-  }
-}
-
-// ---------------------------------------------------------------------------
-
 let userDict = {};
 let userList;
 let qrScanner;
@@ -295,8 +129,7 @@ function showTable() {
 }
 
 function showQR() {
-  const camLS = localStorage.getItem("adminCam");
-  qrScanner.start(camLS || null).catch((err) => {
+  qrScanner.start().catch((err) => {
     console.error("Scanner start error:", err);
   });
 
@@ -687,18 +520,16 @@ function changeCamera() {
         return;
       }
 
-      let currentCameraId = localStorage.getItem("adminCam");
-      let currentIndex = cameras.findIndex((c) => c.id === currentCameraId);
+      const currentId = qrScanner._getActiveDeviceId();
+      let currentIndex = cameras.findIndex((c) => c.id === currentId);
 
       if (currentIndex === -1) {
         currentIndex = 0;
       }
 
       const nextIndex = (currentIndex + 1) % cameras.length;
-      const nextCamera = cameras[nextIndex];
 
-      localStorage.setItem("adminCam", nextCamera.id);
-      qrScanner.setCamera(nextCamera.id);
+      qrScanner.setCamera(cameras[nextIndex].id);
     })
     .catch((error) => {
       console.error("Error switching camera:", error);
@@ -735,7 +566,9 @@ window.onload = (evt) => {
 
   // Prep QR scanner
   const videoElem = document.querySelector("video");
-  qrScanner = new MiniQrScanner(videoElem, scannedCode);
+  qrScanner = new MiniQrScanner(videoElem, scannedCode, {
+    storageKey: "adminCam",
+  });
 
   // Default behavior
   document.getElementById("goBackBtn").onclick = (evt) => {
