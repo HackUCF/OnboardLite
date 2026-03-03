@@ -3,8 +3,8 @@
 <!-- List library -->
 <script src="//cdnjs.cloudflare.com/ajax/libs/list.js/2.3.1/list.min.js"></script>
 
-<!-- QR library -->
-<script src="/static/lib/qr-scanner.umd.min.js"></script>
+<!-- ZXing WASM barcode reader (reader-only IIFE, wasm fetched on demand from jsDelivr) -->
+<script src="https://cdn.jsdelivr.net/npm/zxing-wasm@3.0.0/dist/iife/reader/index.js"></script>
 <style>
   /* Ensure modal sits on top of page content and is centered */
   .modal {
@@ -255,11 +255,7 @@
       </div>
 
       <div class="form-actions">
-        <button
-          type="button"
-          id="check-discord-btn"
-          class="btn btn-primary"
-        >
+        <button type="button" id="check-discord-btn" class="btn btn-primary">
           Check Discord Account
         </button>
         <button
@@ -270,10 +266,7 @@
         >
           Execute Migration
         </button>
-        <button
-          type="button"
-          class="btn btn-secondary close-migration-modal"
-        >
+        <button type="button" class="btn btn-secondary close-migration-modal">
           Cancel
         </button>
       </div>

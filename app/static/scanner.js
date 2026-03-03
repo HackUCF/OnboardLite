@@ -1,62 +1,171 @@
-let qrScanner;
-let isScanning = true;
+/**
+ * Dues Scanner
+ *
+ * Detection strategy (in order):
+ *   1. BarcodeDetector (native browser API — Chrome/Android, fast, zero extra cost)
+ *   2. zxing-wasm       (WASM build of ZXing-C++, cross-browser fallback)
+ *
+ * Camera frames are grabbed via requestAnimationFrame against a <video> element.
+ * No third-party camera/scanner library is used — just getUserMedia + canvas.
+ */
 
-// Initialize QR Scanner
-function initScanner() {
-  const video = document.getElementById("qr-video");
-  qrScanner = new QrScanner(video, onScanResult, {
-    maxScansPerSecond: 5,
-    highlightScanRegion: true,
-    returnDetailedScanResult: true,
+// ---------------------------------------------------------------------------
+// State
+// ---------------------------------------------------------------------------
+
+let stream = null; // MediaStream from getUserMedia
+let rafId = null; // requestAnimationFrame handle
+let isScanning = true; // false while showing a result
+
+// Offscreen canvas used to snapshot frames for both detection paths
+const canvas = document.createElement("canvas");
+const ctx = canvas.getContext("2d", { willReadFrequently: true });
+
+// ---------------------------------------------------------------------------
+// Detection back-ends
+// ---------------------------------------------------------------------------
+
+// Will be resolved to a function (ImageData) => Promise<string|null>
+let detect = null;
+
+async function buildDetector() {
+  // --- Path 1: native BarcodeDetector ---
+  if ("BarcodeDetector" in window) {
+    const supported = await BarcodeDetector.getSupportedFormats();
+    if (supported.includes("qr_code")) {
+      const detector = new BarcodeDetector({ formats: ["qr_code"] });
+      return async (imageData) => {
+        const results = await detector.detect(imageData);
+        return results.length > 0 ? results[0].rawValue : null;
+      };
+    }
+  }
+
+  // --- Path 2: zxing-wasm IIFE fallback ---
+  // The IIFE script registers itself as window.ZXingWASM
+  if (typeof ZXingWASM === "undefined") {
+    throw new Error("ZXingWASM not loaded");
+  }
+
+  // Point the WASM loader at the jsDelivr CDN so we never vendor the binary
+  ZXingWASM.prepareZXingModule({
+    overrides: {
+      locateFile: (path, prefix) => {
+        if (path.endsWith(".wasm")) {
+          return `https://cdn.jsdelivr.net/npm/zxing-wasm@3.0.0/dist/reader/${path}`;
+        }
+        return prefix + path;
+      },
+    },
   });
 
-  // Check for saved camera preference
-  const savedCamera = localStorage.getItem("scannerCam");
-
-  qrScanner
-    .start()
-    .then(() => {
-      if (savedCamera && typeof savedCamera !== "undefined") {
-        // Verify the saved camera still exists before trying to use it
-        QrScanner.listCameras(true).then((cameras) => {
-          const cameraExists = cameras.some((cam) => cam.id === savedCamera);
-          if (cameraExists) {
-            qrScanner.setCamera(savedCamera);
-          }
-        });
-      }
-    })
-    .catch((err) => {
-      console.error("Error starting scanner:", err);
-      showError("Camera Error", "Unable to access camera");
+  return async (imageData) => {
+    const results = await ZXingWASM.readBarcodes(imageData, {
+      formats: ["QRCode"],
+      maxNumberOfSymbols: 1,
+      tryHarder: false,
     });
+    return results.length > 0 ? results[0].text : null;
+  };
 }
 
-// Handle scan result
-async function onScanResult(result) {
-  if (!isScanning) return;
+// ---------------------------------------------------------------------------
+// Camera
+// ---------------------------------------------------------------------------
 
-  console.log("Scanned:", result.data);
-  qrScanner.stop();
-  isScanning = false;
+const video = document.getElementById("qr-video");
+
+async function startCamera(deviceId) {
+  if (stream) {
+    stream.getTracks().forEach((t) => t.stop());
+  }
+
+  if (deviceId) {
+    try {
+      stream = await navigator.mediaDevices.getUserMedia({
+        video: { deviceId: { exact: deviceId } },
+      });
+    } catch (err) {
+      if (err.name === "OverconstrainedError" || err.name === "NotFoundError") {
+        // Saved device ID is stale — clear it and fall back to default
+        localStorage.removeItem("scannerCam");
+        stream = await navigator.mediaDevices.getUserMedia({
+          video: { facingMode: { ideal: "environment" } },
+        });
+      } else {
+        throw err;
+      }
+    }
+  } else {
+    stream = await navigator.mediaDevices.getUserMedia({
+      video: { facingMode: { ideal: "environment" } },
+    });
+  }
+
+  video.srcObject = stream;
+  await video.play();
+}
+
+function getActiveDeviceId() {
+  if (!stream) return null;
+  const track = stream.getVideoTracks()[0];
+  return track ? track.getSettings().deviceId : null;
+}
+
+// ---------------------------------------------------------------------------
+// Scan loop
+// ---------------------------------------------------------------------------
+
+function scheduleNextFrame() {
+  rafId = requestAnimationFrame(scanFrame);
+}
+
+async function scanFrame() {
+  if (!isScanning || video.readyState < video.HAVE_ENOUGH_DATA) {
+    scheduleNextFrame();
+    return;
+  }
+
+  canvas.width = video.videoWidth;
+  canvas.height = video.videoHeight;
+  ctx.drawImage(video, 0, 0);
 
   try {
-    // Call API to check dues status
-    const response = await fetch(`/api/member/${result.data}/dues`);
-    const data = await response.json();
-
-    if (data.dues) {
-      showSuccess();
-    } else {
-      showError();
+    const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+    const value = await detect(imageData);
+    if (value) {
+      await onScanResult(value);
+      return; // don't schedule another frame — wait for user to clear
     }
-  } catch (error) {
-    console.error("Error checking dues:", error);
-    showError();
+  } catch (err) {
+    console.error("Scan error:", err);
+  }
+
+  scheduleNextFrame();
+}
+
+// ---------------------------------------------------------------------------
+// Result handling
+// ---------------------------------------------------------------------------
+
+async function onScanResult(value) {
+  isScanning = false;
+  cancelAnimationFrame(rafId);
+
+  console.log("Scanned:", value);
+
+  try {
+    const response = await fetch(
+      `/api/member/${encodeURIComponent(value)}/dues`,
+    );
+    const data = await response.json();
+    data.dues ? showSuccess() : showError();
+  } catch (err) {
+    console.error("Error checking dues:", err);
+    showError("Network Error", "Could not reach server");
   }
 }
 
-// Show success (green)
 function showSuccess() {
   const container = document.getElementById("scannerContainer");
   const statusMessage = document.getElementById("statusMessage");
@@ -68,8 +177,7 @@ function showSuccess() {
   clearInstruction.classList.add("show");
 }
 
-// Show error (red)
-function showError(title = "Dues Not Paid ✗", subtitle = "") {
+function showError(title = "Dues Not Paid ✗") {
   const container = document.getElementById("scannerContainer");
   const statusMessage = document.getElementById("statusMessage");
   const clearInstruction = document.getElementById("clearInstruction");
@@ -80,124 +188,94 @@ function showError(title = "Dues Not Paid ✗", subtitle = "") {
   clearInstruction.classList.add("show");
 }
 
-// Clear and restart scanning
 function clearAndRestart() {
-  if (isScanning) return; // Already scanning
+  if (isScanning) return;
 
   const container = document.getElementById("scannerContainer");
   const statusMessage = document.getElementById("statusMessage");
   const clearInstruction = document.getElementById("clearInstruction");
 
-  // Reset UI
   container.className = "scanner-container";
   statusMessage.classList.remove("show");
   clearInstruction.classList.remove("show");
 
-  // Restart scanner
-  setTimeout(() => {
-    isScanning = true;
-    qrScanner.start().catch((err) => {
-      console.error("Error restarting scanner:", err);
-    });
-  }, 300);
+  isScanning = true;
+  scheduleNextFrame();
 }
 
-// Switch camera functionality
+// ---------------------------------------------------------------------------
+// Camera switching
+// ---------------------------------------------------------------------------
+
 async function switchCamera() {
   try {
-    const cameras = await QrScanner.listCameras();
+    const devices = await navigator.mediaDevices.enumerateDevices();
+    const cameras = devices.filter((d) => d.kind === "videoinput");
 
     if (cameras.length <= 1) {
       alert("Only one camera available");
       return;
     }
 
-    // Get current camera ID. qrScanner doesn't expose a simple "getCurrentCameraId" method in all versions,
-    // but usually we can infer it or we track it.
-    // However, since we are setting it via localStorage, we can use that as a hint,
-    // or try to find which one is active.
-    // QrScanner's internal state might not be easily accessible.
-    // But we are storing `scannerCam` in localStorage.
-
-    let currentCameraId = localStorage.getItem("scannerCam");
-
-    // If not in local storage (first run), or if the stored one isn't actually the active one (edge case),
-    // we might default to the first one in the list?
-    // Actually, QrScanner defaults to the environment facing camera if available, or just the first one.
-
-    // Let's find the index of the current camera in the list.
-    let currentIndex = -1;
-    if (currentCameraId) {
-      currentIndex = cameras.findIndex((c) => c.id === currentCameraId);
-    }
-
-    // If we couldn't find the current one (maybe it wasn't set yet, or device changed), start at 0
-    if (currentIndex === -1) {
-      // If we don't know which one is active, we can assume it's the first one if we just started.
-      // Or better, let's just pick the *next* one from what we *think* it is.
-      // If we really don't know, we'll start rotating from 0.
-      currentIndex = 0;
-    }
-
-    // Calculate next index
+    const currentId = getActiveDeviceId();
+    const currentIndex = cameras.findIndex((c) => c.deviceId === currentId);
     const nextIndex = (currentIndex + 1) % cameras.length;
-    const nextCamera = cameras[nextIndex];
+    const nextId = cameras[nextIndex].deviceId;
 
-    // Save camera preference
-    localStorage.setItem("scannerCam", nextCamera.id);
-
-    // Switch to selected camera
-    await qrScanner.setCamera(nextCamera.id);
-
-    // Optional: visual feedback
-    // console.log(`Switched to camera: ${nextCamera.label || `Camera ${nextIndex + 1}`}`);
-    // We could show a toast, but for now just switching is fine.
-  } catch (error) {
-    console.error("Error switching camera:", error);
+    localStorage.setItem("scannerCam", nextId);
+    await startCamera(nextId);
+  } catch (err) {
+    console.error("Error switching camera:", err);
     alert("Error switching camera.");
   }
 }
 
-// Touch/click handler for clearing status
-document
-  .getElementById("scannerContainer")
-  .addEventListener("click", function (e) {
-    // Don't trigger clear if clicking the camera button
-    if (e.target.id === "changeCameraBtn") {
-      return;
-    }
-    // If we are touching the video area, we might just want to focus, but here it's used to clear the result overlay
-    // The original code prevented default, which might interfere with button clicks if not careful.
+// ---------------------------------------------------------------------------
+// Event listeners
+// ---------------------------------------------------------------------------
 
-    // Only prevent default if we are actually handling the click (e.g. clearing a result)
-    if (!isScanning) {
-      e.preventDefault();
-      clearAndRestart();
-    }
-  });
-
-// Camera switch button handler
-document
-  .getElementById("changeCameraBtn")
-  .addEventListener("click", function (e) {
+document.getElementById("scannerContainer").addEventListener("click", (e) => {
+  if (e.target.id === "changeCameraBtn") return;
+  if (!isScanning) {
     e.preventDefault();
-    e.stopPropagation();
-    switchCamera();
-  });
-
-// Prevent context menu on long press
-document.addEventListener("contextmenu", function (e) {
-  e.preventDefault();
-});
-
-// Initialize when page loads
-window.addEventListener("load", function () {
-  initScanner();
-});
-
-// Cleanup on page unload
-window.addEventListener("beforeunload", function () {
-  if (qrScanner) {
-    qrScanner.destroy();
+    clearAndRestart();
   }
+});
+
+document.getElementById("changeCameraBtn").addEventListener("click", (e) => {
+  e.preventDefault();
+  e.stopPropagation();
+  switchCamera();
+});
+
+document.addEventListener("contextmenu", (e) => e.preventDefault());
+
+// ---------------------------------------------------------------------------
+// Init
+// ---------------------------------------------------------------------------
+
+window.addEventListener("load", async () => {
+  try {
+    detect = await buildDetector();
+  } catch (err) {
+    console.error("Failed to build barcode detector:", err);
+    showError("Scanner unavailable");
+    return;
+  }
+
+  const savedCamera = localStorage.getItem("scannerCam");
+  try {
+    await startCamera(savedCamera || null);
+  } catch (err) {
+    console.error("Camera error:", err);
+    showError("Camera Error", "Unable to access camera");
+    return;
+  }
+
+  scheduleNextFrame();
+});
+
+window.addEventListener("beforeunload", () => {
+  cancelAnimationFrame(rafId);
+  if (stream) stream.getTracks().forEach((t) => t.stop());
 });
