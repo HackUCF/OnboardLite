@@ -3,8 +3,8 @@
 <!-- List library -->
 <script src="//cdnjs.cloudflare.com/ajax/libs/list.js/2.3.1/list.min.js"></script>
 
-<!-- QR library -->
-<script src="/static/lib/qr-scanner.umd.min.js"></script>
+<!-- ZXing WASM barcode reader (reader-only IIFE, wasm fetched on demand from jsDelivr) -->
+<script src="https://cdn.jsdelivr.net/npm/zxing-wasm@3.0.0/dist/iife/reader/index.js"></script>
 <style>
   /* Ensure modal sits on top of page content and is centered */
   .modal {
@@ -284,5 +284,6 @@
     <div id="migrationResults"></div>
   </div>
 </div>
+<script src="/static/mini-qr-scanner.js"></script>
 <script type="text/javascript" src="/static/admin.js"></script>
 {% endblock %}

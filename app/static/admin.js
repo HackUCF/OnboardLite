@@ -129,16 +129,8 @@ function showTable() {
 }
 
 function showQR() {
-  qrScanner.start().then(() => {
-    const camLS = localStorage.getItem("adminCam");
-    if (camLS && typeof camLS !== "undefined") {
-      QrScanner.listCameras(true).then(cameras => {
-        const cameraExists = cameras.some(cam => cam.id === camLS);
-        if (cameraExists) {
-          qrScanner.setCamera(camLS);
-        }
-      });
-    }
+  qrScanner.start().catch((err) => {
+    console.error("Scanner start error:", err);
   });
 
   document.getElementById("user").style.display = "none";
@@ -407,43 +399,51 @@ function loadMembershipHistory(userId) {
   const historyContainer = document.getElementById("membership_history");
 
   // Show loading message
-  const loadingP = document.createElement('p');
-  loadingP.textContent = 'Loading membership history...';
-  historyContainer.innerHTML = '';
+  const loadingP = document.createElement("p");
+  loadingP.textContent = "Loading membership history...";
+  historyContainer.innerHTML = "";
   historyContainer.appendChild(loadingP);
 
   fetch(`/admin/membership_history/?user_id=${userId}`)
     .then((response) => response.json())
     .then((data) => {
       // Clear loading message
-      historyContainer.innerHTML = '';
+      historyContainer.innerHTML = "";
 
       if (data.error) {
-        const errorP = document.createElement('p');
-        errorP.textContent = 'Error loading history: ' + data.error;
+        const errorP = document.createElement("p");
+        errorP.textContent = "Error loading history: " + data.error;
         historyContainer.appendChild(errorP);
         return;
       }
 
       const history = data.data;
       if (history.length === 0) {
-        const noHistoryP = document.createElement('p');
-        noHistoryP.textContent = 'No membership history found for this user.';
+        const noHistoryP = document.createElement("p");
+        noHistoryP.textContent = "No membership history found for this user.";
         historyContainer.appendChild(noHistoryP);
         return;
       }
 
       // Create table
-      const table = document.createElement('table');
-      table.className = 'data_table';
+      const table = document.createElement("table");
+      table.className = "data_table";
 
       // Create thead
-      const thead = document.createElement('thead');
-      const headerRow = document.createElement('tr');
+      const thead = document.createElement("thead");
+      const headerRow = document.createElement("tr");
 
-      const headers = ['Reset Date', 'Was Member', 'Paid Dues', 'Reason', 'Name at Reset', 'Email at Reset', 'Discord at Reset'];
-      headers.forEach(headerText => {
-        const th = document.createElement('th');
+      const headers = [
+        "Reset Date",
+        "Was Member",
+        "Paid Dues",
+        "Reason",
+        "Name at Reset",
+        "Email at Reset",
+        "Discord at Reset",
+      ];
+      headers.forEach((headerText) => {
+        const th = document.createElement("th");
         th.textContent = headerText;
         headerRow.appendChild(th);
       });
@@ -452,43 +452,43 @@ function loadMembershipHistory(userId) {
       table.appendChild(thead);
 
       // Create tbody
-      const tbody = document.createElement('tbody');
+      const tbody = document.createElement("tbody");
 
       history.forEach((record) => {
-        const row = document.createElement('tr');
+        const row = document.createElement("tr");
 
         // Reset Date
-        const dateCell = document.createElement('td');
+        const dateCell = document.createElement("td");
         dateCell.textContent = new Date(record.reset_date).toLocaleString();
         row.appendChild(dateCell);
 
         // Was Member
-        const memberCell = document.createElement('td');
+        const memberCell = document.createElement("td");
         memberCell.textContent = record.was_full_member ? "✔️" : "❌";
         row.appendChild(memberCell);
 
         // Paid Dues
-        const duesCell = document.createElement('td');
+        const duesCell = document.createElement("td");
         duesCell.textContent = record.had_paid_dues ? "✔️" : "❌";
         row.appendChild(duesCell);
 
         // Reason
-        const reasonCell = document.createElement('td');
+        const reasonCell = document.createElement("td");
         reasonCell.textContent = record.reset_reason;
         row.appendChild(reasonCell);
 
         // Name at Reset
-        const nameCell = document.createElement('td');
+        const nameCell = document.createElement("td");
         nameCell.textContent = `${record.first_name_snapshot} ${record.surname_snapshot}`;
         row.appendChild(nameCell);
 
         // Email at Reset
-        const emailCell = document.createElement('td');
+        const emailCell = document.createElement("td");
         emailCell.textContent = record.email_snapshot || "N/A";
         row.appendChild(emailCell);
 
         // Discord at Reset
-        const discordCell = document.createElement('td');
+        const discordCell = document.createElement("td");
         discordCell.textContent = record.discord_username_snapshot || "N/A";
         row.appendChild(discordCell);
 
@@ -500,9 +500,9 @@ function loadMembershipHistory(userId) {
     })
     .catch((error) => {
       console.error("Error loading membership history:", error);
-      historyContainer.innerHTML = '';
-      const errorP = document.createElement('p');
-      errorP.textContent = 'Error loading membership history.';
+      historyContainer.innerHTML = "";
+      const errorP = document.createElement("p");
+      errorP.textContent = "Error loading membership history.";
       historyContainer.appendChild(errorP);
     });
 }
@@ -513,38 +513,32 @@ function logoff() {
 }
 
 function changeCamera() {
-  QrScanner.listCameras().then((cameras) => {
-    if (cameras.length <= 1) {
-      alert('Only one camera available');
-      return;
-    }
+  MiniQrScanner.listCameras()
+    .then((cameras) => {
+      if (cameras.length <= 1) {
+        alert("Only one camera available");
+        return;
+      }
 
-    let currentCameraId = localStorage.getItem("adminCam");
-    let currentIndex = -1;
+      const currentId = qrScanner._getActiveDeviceId();
+      let currentIndex = cameras.findIndex((c) => c.id === currentId);
 
-    if (currentCameraId) {
-      currentIndex = cameras.findIndex(c => c.id === currentCameraId);
-    }
+      if (currentIndex === -1) {
+        currentIndex = 0;
+      }
 
-    if (currentIndex === -1) {
-      currentIndex = 0;
-    }
+      const nextIndex = (currentIndex + 1) % cameras.length;
 
-    const nextIndex = (currentIndex + 1) % cameras.length;
-    const nextCamera = cameras[nextIndex];
-
-    localStorage.setItem("adminCam", nextCamera.id);
-    qrScanner.setCamera(nextCamera.id);
-  }).catch(error => {
-    console.error('Error switching camera:', error);
-    alert('Error switching camera.');
-  });
+      qrScanner.setCamera(cameras[nextIndex].id);
+    })
+    .catch((error) => {
+      console.error("Error switching camera:", error);
+      alert("Error switching camera.");
+    });
 }
 
 function scannedCode(result) {
-  // Enter load mode...
-  qrScanner.stop();
-
+  // Enter load mode... (scanner already paused itself after a hit)
   showUser(result.data);
 }
 
@@ -570,12 +564,10 @@ function filter(showOnlyActiveUsers) {
 window.onload = (evt) => {
   load();
 
-  // Prep QR library
+  // Prep QR scanner
   const videoElem = document.querySelector("video");
-  qrScanner = new QrScanner(videoElem, scannedCode, {
-    maxScansPerSecond: 10,
-    highlightScanRegion: true,
-    returnDetailedScanResult: true,
+  qrScanner = new MiniQrScanner(videoElem, scannedCode, {
+    storageKey: "adminCam",
   });
 
   // Default behavior
@@ -635,10 +627,10 @@ async function checkDiscordAccount() {
 
   // Validate Discord ID format
   if (!/^[0-9]{17,20}$/.test(discordId)) {
-    const errorDiv = document.createElement('div');
-    errorDiv.className = 'error';
-    errorDiv.textContent = 'Invalid Discord ID format. Must be 17-20 digits.';
-    resultsDiv.innerHTML = '';
+    const errorDiv = document.createElement("div");
+    errorDiv.className = "error";
+    errorDiv.textContent = "Invalid Discord ID format. Must be 17-20 digits.";
+    resultsDiv.innerHTML = "";
     resultsDiv.appendChild(errorDiv);
     document.getElementById("migrationSubmit").disabled = true;
     return;
@@ -654,98 +646,113 @@ async function checkDiscordAccount() {
       const user = data.data;
 
       // Create account found div
-      const accountDiv = document.createElement('div');
-      accountDiv.className = 'account-found';
+      const accountDiv = document.createElement("div");
+      accountDiv.className = "account-found";
 
       // Create and append header
-      const header = document.createElement('h4');
-      header.textContent = '✅ Account Found';
+      const header = document.createElement("h4");
+      header.textContent = "✅ Account Found";
       accountDiv.appendChild(header);
 
       // Discord Username
-      const discordP = document.createElement('p');
-      const discordStrong = document.createElement('strong');
-      discordStrong.textContent = 'Discord Username:';
+      const discordP = document.createElement("p");
+      const discordStrong = document.createElement("strong");
+      discordStrong.textContent = "Discord Username:";
       discordP.appendChild(discordStrong);
-      discordP.appendChild(document.createTextNode(' ' + (user.discord?.username || "Unknown")));
+      discordP.appendChild(
+        document.createTextNode(" " + (user.discord?.username || "Unknown")),
+      );
       accountDiv.appendChild(discordP);
 
       // Name
-      const nameP = document.createElement('p');
-      const nameStrong = document.createElement('strong');
-      nameStrong.textContent = 'Name:';
+      const nameP = document.createElement("p");
+      const nameStrong = document.createElement("strong");
+      nameStrong.textContent = "Name:";
       nameP.appendChild(nameStrong);
-      nameP.appendChild(document.createTextNode(' ' + (user.first_name || "Not set") + ' ' + (user.surname || "")));
+      nameP.appendChild(
+        document.createTextNode(
+          " " + (user.first_name || "Not set") + " " + (user.surname || ""),
+        ),
+      );
       accountDiv.appendChild(nameP);
 
       // Email
-      const emailP = document.createElement('p');
-      const emailStrong = document.createElement('strong');
-      emailStrong.textContent = 'Email:';
+      const emailP = document.createElement("p");
+      const emailStrong = document.createElement("strong");
+      emailStrong.textContent = "Email:";
       emailP.appendChild(emailStrong);
-      emailP.appendChild(document.createTextNode(' ' + (user.email || "Not set")));
+      emailP.appendChild(
+        document.createTextNode(" " + (user.email || "Not set")),
+      );
       accountDiv.appendChild(emailP);
 
       // Is Member
-      const memberP = document.createElement('p');
-      const memberStrong = document.createElement('strong');
-      memberStrong.textContent = 'Is Member:';
+      const memberP = document.createElement("p");
+      const memberStrong = document.createElement("strong");
+      memberStrong.textContent = "Is Member:";
       memberP.appendChild(memberStrong);
-      memberP.appendChild(document.createTextNode(' ' + (user.is_full_member ? "Yes" : "No")));
+      memberP.appendChild(
+        document.createTextNode(" " + (user.is_full_member ? "Yes" : "No")),
+      );
       accountDiv.appendChild(memberP);
 
       // Join Date
-      const joinP = document.createElement('p');
-      const joinStrong = document.createElement('strong');
-      joinStrong.textContent = 'Join Date:';
+      const joinP = document.createElement("p");
+      const joinStrong = document.createElement("strong");
+      joinStrong.textContent = "Join Date:";
       joinP.appendChild(joinStrong);
-      joinP.appendChild(document.createTextNode(' ' + (user.join_date || "Not set")));
+      joinP.appendChild(
+        document.createTextNode(" " + (user.join_date || "Not set")),
+      );
       accountDiv.appendChild(joinP);
 
       // Warning message
-      const warningP = document.createElement('p');
-      warningP.className = 'warning';
+      const warningP = document.createElement("p");
+      warningP.className = "warning";
       if (!user.first_name || !user.surname || !user.email) {
-        warningP.textContent = '⚠️ This appears to be a new/temporary account with minimal data';
+        warningP.textContent =
+          "⚠️ This appears to be a new/temporary account with minimal data";
       } else {
-        warningP.textContent = '⚠️ This account has significant data that will be lost';
+        warningP.textContent =
+          "⚠️ This account has significant data that will be lost";
       }
       accountDiv.appendChild(warningP);
 
       // Clear and append
-      resultsDiv.innerHTML = '';
+      resultsDiv.innerHTML = "";
       resultsDiv.appendChild(accountDiv);
 
       // Enable migration button
       document.getElementById("migrationSubmit").disabled = false;
     } else {
       // Create account not found div
-      const notFoundDiv = document.createElement('div');
-      notFoundDiv.className = 'account-not-found';
+      const notFoundDiv = document.createElement("div");
+      notFoundDiv.className = "account-not-found";
 
-      const header = document.createElement('h4');
-      header.textContent = '❌ No Account Found';
+      const header = document.createElement("h4");
+      header.textContent = "❌ No Account Found";
       notFoundDiv.appendChild(header);
 
-      const p1 = document.createElement('p');
-      p1.textContent = 'No user account exists with Discord ID: ' + discordId;
+      const p1 = document.createElement("p");
+      p1.textContent = "No user account exists with Discord ID: " + discordId;
       notFoundDiv.appendChild(p1);
 
-      const p2 = document.createElement('p');
-      p2.textContent = 'The user must create an account with this Discord ID first.';
+      const p2 = document.createElement("p");
+      p2.textContent =
+        "The user must create an account with this Discord ID first.";
       notFoundDiv.appendChild(p2);
 
-      resultsDiv.innerHTML = '';
+      resultsDiv.innerHTML = "";
       resultsDiv.appendChild(notFoundDiv);
 
       // Disable migration button
       document.getElementById("migrationSubmit").disabled = true;
     }
   } catch (error) {
-    const errorDiv = document.createElement('div');
-    errorDiv.className = 'error';
-    errorDiv.textContent = 'Error checking account: ' + error.message;
-    resultsDiv.innerHTML = '';
+    const errorDiv = document.createElement("div");
+    errorDiv.className = "error";
+    errorDiv.textContent = "Error checking account: " + error.message;
+    resultsDiv.innerHTML = "";
     resultsDiv.appendChild(errorDiv);
     document.getElementById("migrationSubmit").disabled = true;
   }
@@ -789,40 +796,46 @@ document.addEventListener("DOMContentLoaded", function () {
 
         if (response.ok && result.success) {
           // Create success div
-          const successDiv = document.createElement('div');
-          successDiv.className = 'success';
+          const successDiv = document.createElement("div");
+          successDiv.className = "success";
 
-          const header = document.createElement('h4');
-          header.textContent = '✅ Migration Successful';
+          const header = document.createElement("h4");
+          header.textContent = "✅ Migration Successful";
           successDiv.appendChild(header);
 
-          const messageP = document.createElement('p');
+          const messageP = document.createElement("p");
           messageP.textContent = result.message;
           successDiv.appendChild(messageP);
 
-          const oldIdP = document.createElement('p');
-          const oldIdStrong = document.createElement('strong');
-          oldIdStrong.textContent = 'Old Discord ID:';
+          const oldIdP = document.createElement("p");
+          const oldIdStrong = document.createElement("strong");
+          oldIdStrong.textContent = "Old Discord ID:";
           oldIdP.appendChild(oldIdStrong);
-          oldIdP.appendChild(document.createTextNode(' ' + result.old_discord_id));
+          oldIdP.appendChild(
+            document.createTextNode(" " + result.old_discord_id),
+          );
           successDiv.appendChild(oldIdP);
 
-          const newIdP = document.createElement('p');
-          const newIdStrong = document.createElement('strong');
-          newIdStrong.textContent = 'New Discord ID:';
+          const newIdP = document.createElement("p");
+          const newIdStrong = document.createElement("strong");
+          newIdStrong.textContent = "New Discord ID:";
           newIdP.appendChild(newIdStrong);
-          newIdP.appendChild(document.createTextNode(' ' + result.new_discord_id));
+          newIdP.appendChild(
+            document.createTextNode(" " + result.new_discord_id),
+          );
           successDiv.appendChild(newIdP);
 
-          const usernameP = document.createElement('p');
-          const usernameStrong = document.createElement('strong');
-          usernameStrong.textContent = 'New Username:';
+          const usernameP = document.createElement("p");
+          const usernameStrong = document.createElement("strong");
+          usernameStrong.textContent = "New Username:";
           usernameP.appendChild(usernameStrong);
-          usernameP.appendChild(document.createTextNode(' ' + result.new_discord_username));
+          usernameP.appendChild(
+            document.createTextNode(" " + result.new_discord_username),
+          );
           successDiv.appendChild(usernameP);
 
           const resultsContainer = document.getElementById("migrationResults");
-          resultsContainer.innerHTML = '';
+          resultsContainer.innerHTML = "";
           resultsContainer.appendChild(successDiv);
 
           // Refresh the user data after a delay
@@ -836,36 +849,38 @@ document.addEventListener("DOMContentLoaded", function () {
           );
         }
       } catch (error) {
-        const errorDiv = document.createElement('div');
-        errorDiv.className = 'error';
-        errorDiv.textContent = 'Migration failed: ' + error.message;
+        const errorDiv = document.createElement("div");
+        errorDiv.className = "error";
+        errorDiv.textContent = "Migration failed: " + error.message;
         const resultsContainer = document.getElementById("migrationResults");
-        resultsContainer.innerHTML = '';
+        resultsContainer.innerHTML = "";
         resultsContainer.appendChild(errorDiv);
       }
     });
   }
 });
 
-document.addEventListener("DOMContentLoaded", function() {
-    // Delegation for dynamic table buttons
-    document.querySelector('tbody.list').addEventListener('click', function(e) {
-        if (e.target && e.target.closest('.view-user-details')) {
-            const btn = e.target.closest('.view-user-details');
-            const userId = btn.getAttribute('data-userid');
-            showUser(userId);
-        }
-    });
-
-    // Check Discord Button
-    const checkDiscordBtn = document.getElementById("check-discord-btn");
-    if (checkDiscordBtn) {
-        checkDiscordBtn.addEventListener("click", checkDiscordAccount);
+document.addEventListener("DOMContentLoaded", function () {
+  // Delegation for dynamic table buttons
+  document.querySelector("tbody.list").addEventListener("click", function (e) {
+    if (e.target && e.target.closest(".view-user-details")) {
+      const btn = e.target.closest(".view-user-details");
+      const userId = btn.getAttribute("data-userid");
+      showUser(userId);
     }
+  });
 
-    // Close Migration Modal buttons
-    const closeMigrationBtns = document.querySelectorAll(".close-migration-modal");
-    closeMigrationBtns.forEach(btn => {
-        btn.addEventListener("click", closeMigrationModal);
-    });
+  // Check Discord Button
+  const checkDiscordBtn = document.getElementById("check-discord-btn");
+  if (checkDiscordBtn) {
+    checkDiscordBtn.addEventListener("click", checkDiscordAccount);
+  }
+
+  // Close Migration Modal buttons
+  const closeMigrationBtns = document.querySelectorAll(
+    ".close-migration-modal",
+  );
+  closeMigrationBtns.forEach((btn) => {
+    btn.addEventListener("click", closeMigrationModal);
+  });
 });
