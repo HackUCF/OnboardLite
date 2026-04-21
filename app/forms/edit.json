@@ -26,7 +26,7 @@
       },
       {
         "label": "NID",
-        "caption": "This is the UCF identifier with two letters and six numbers. It's in your school email!",
+        "caption": "This is the UCF identifier with two letters and six numbers. It's in your school email! (Format: ab123456)",
         "input": "nid",
         "key": "nid",
         "required": true
