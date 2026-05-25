@@ -40,9 +40,9 @@ async def admin(request: Request, current_admin: CurrentAdmin):
     Renders the Admin home page.
     """
     return templates.TemplateResponse(
+        request,
         "admin_searcher.html",
         {
-            "request": request,
             "icon": current_admin["pfp"],
             "name": current_admin["name"],
             "id": current_admin["id"],

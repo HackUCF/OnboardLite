@@ -260,9 +260,9 @@ async def index(request: Request, token: Optional[str] = Cookie(None)):
             infra_email = None
 
     return templates.TemplateResponse(
+        request,
         "index.html",
         {
-            "request": request,
             "is_full_member": is_full_member,
             "is_admin": is_admin,
             "user_id": user_id,
@@ -440,7 +440,7 @@ Renders the landing page for the sign-up flow.
 @app.get("/join/")
 async def join(request: Request, token: Optional[str] = Cookie(None)):
     if token is None:
-        return templates.TemplateResponse("signup.html", {"request": request})
+        return templates.TemplateResponse(request, "signup.html")
     else:
         return RedirectResponse("/join/2/", status_code=status.HTTP_302_FOUND)
 
@@ -463,7 +463,7 @@ async def profile(
     # Re-run approval workflow in background.
     background_tasks.add_task(Approve.approve_member, uuid.UUID(current_user.get("id")))
 
-    return templates.TemplateResponse("profile.html", {"request": request, "user_data": user_data})
+    return templates.TemplateResponse(request, "profile.html", {"user_data": user_data})
 
 
 """
@@ -500,9 +500,9 @@ async def forms(
 
     # return num
     return templates.TemplateResponse(
+        request,
         "form.html",
         {
-            "request": request,
             "icon": current_user["pfp"],
             "user_data": user_data,
             "id": current_user["id"],
@@ -513,7 +513,7 @@ async def forms(
 
 @app.get("/final")
 async def final(request: Request):
-    return templates.TemplateResponse("done.html", {"request": request})
+    return templates.TemplateResponse(request, "done.html")
 
 
 @app.get("/logout")
@@ -529,7 +529,7 @@ async def scanner(request: Request, current_user: CurrentMember):
     Scanner interface for checking member dues status.
     Touch-friendly interface that shows green/red based on QR code scan results.
     """
-    return templates.TemplateResponse("scanner.html", {"request": request})
+    return templates.TemplateResponse(request, "scanner.html")
 
 
 @app.get("/favicon.ico", include_in_schema=False)

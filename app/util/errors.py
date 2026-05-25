@@ -11,8 +11,9 @@ class Errors:
 
     def generate(request, num=404, msg="Page not found.", essay=""):
         return templates.TemplateResponse(
+            request,
             "error.html",
-            {"request": request, "code": num, "reason": msg, "essay": essay},
+            {"code": num, "reason": msg, "essay": essay},
             status_code=num,
         )
 

@@ -46,9 +46,9 @@ async def get_root(
     paused_payments = Settings().stripe.pause_payments
 
     return templates.TemplateResponse(
+        request,
         "pay.html",
         {
-            "request": request,
             "user_data": user_data,
             "did_pay_dues": did_pay_dues,
             "paused_payments": paused_payments,
