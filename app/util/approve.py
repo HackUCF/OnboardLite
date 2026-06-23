@@ -111,6 +111,7 @@ class Approve:
         return {"username": username, "password": password}
 
     # !TODO finish the post-sign-up stuff + testing
+    @staticmethod
     def approve_member(member_id: uuid.UUID):
         with Session(engine) as session:
             logger.info(f"Re-running approval for {str(member_id)}")

@@ -25,7 +25,7 @@ router = APIRouter(prefix="/pay", tags=["API"])
 
 if not Settings().stripe.pause_payments:
     # Set Stripe API key.
-    stripe.api_key = Settings().stripe.api_key.get_secret_value()
+    stripe.api_key = Settings().stripe.api_key.get_secret_value()  # pyright: ignore[reportOptionalMemberAccess]
 
 
 @router.get("/")
@@ -37,8 +37,10 @@ async def get_root(
     """
     Get API information.
     """
-    statement = select(UserModel).where(UserModel.id == uuid.UUID(current_user["id"])).options(selectinload(UserModel.discord))
+    statement = select(UserModel).where(UserModel.id == uuid.UUID(current_user["id"])).options(selectinload(UserModel.discord))  # pyright: ignore[reportArgumentType]
     user_data = session.exec(statement).one_or_none()
+    if user_data is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
     did_pay_dues = user_data.did_pay_dues
 
     user_data = user_to_dict(user_data)
@@ -67,6 +69,8 @@ async def create_checkout_session(
         raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail="Payments are currently paused")
 
     user_data = session.exec(select(UserModel).where(UserModel.id == uuid.UUID(current_user.get("id")))).one_or_none()
+    if user_data is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
     if not user_data.email:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="No email associated with account")
     user_id = user_data.id
@@ -76,20 +80,22 @@ async def create_checkout_session(
             line_items=[
                 {
                     # Provide the exact Price ID (for example, pr_1234) of the product you want to sell
-                    "price": Settings().stripe.price_id,
+                    "price": Settings().stripe.price_id,  # pyright: ignore[reportArgumentType]
                     "quantity": 1,
                 },
             ],
             customer_email=stripe_email,
             mode="payment",
-            success_url=Settings().stripe.url_success,
-            cancel_url=Settings().stripe.url_failure,
+            success_url=Settings().stripe.url_success,  # pyright: ignore[reportArgumentType]
+            cancel_url=Settings().stripe.url_failure,  # pyright: ignore[reportArgumentType]
             metadata={"user_id": str(user_id)},
         )
     except Exception as e:
         logger.exception("Error creating checkout session in stripe.py", e)
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Error creating checkout session")
 
+    if not checkout_session.url:
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="No checkout URL returned")
     return RedirectResponse(checkout_session.url, status_code=303)
 
 
@@ -98,7 +104,7 @@ async def webhook(request: Request, background_tasks: BackgroundTasks, session: 
     payload = await request.body()
     sig_header = request.headers.get("stripe-signature")
     event = None
-    endpoint_secret = Settings().stripe.webhook_secret.get_secret_value()
+    endpoint_secret = Settings().stripe.webhook_secret.get_secret_value()  # pyright: ignore[reportOptionalMemberAccess]
 
     try:
         event = stripe.Webhook.construct_event(payload, sig_header, endpoint_secret)
@@ -106,7 +112,7 @@ async def webhook(request: Request, background_tasks: BackgroundTasks, session: 
         # Invalid payload
         logger.error("Malformed Stripe Payload", e)
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Malformed payload")
-    except stripe.error.SignatureVerificationError as e:
+    except stripe.SignatureVerificationError as e:
         # Invalid signature
         logger.error("Malformed Stripe Payload", e)
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Malformed payload")
@@ -129,9 +135,12 @@ async def webhook(request: Request, background_tasks: BackgroundTasks, session: 
 
 
 def pay_dues(checkout_session, db_session, background_tasks):
-    customer_email = checkout_session.get("customer_email")
+    customer_email = checkout_session.customer_email
 
     user_data = db_session.exec(select(UserModel).where(UserModel.email == customer_email)).one_or_none()
+    if user_data is None:
+        logger.error("Stripe webhook: no user found for email %s", customer_email)
+        return
 
     member_id = user_data.id
 

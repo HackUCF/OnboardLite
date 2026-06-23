@@ -30,7 +30,16 @@ dependencies = [
 dev = [
     "httpx",
     "pre-commit",
+    "pyright>=1.1",
     "pytest>=8.3.5",
     "semgrep",
     "virtualenv",
 ]
+
+[tool.pyright]
+pythonVersion = "3.12"
+venvPath = "."
+venv = ".venv"
+include = ["app"]
+exclude = ["app/migrations", "**/__pycache__"]
+typeCheckingMode = "basic"
