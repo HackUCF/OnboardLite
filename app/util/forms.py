@@ -29,7 +29,8 @@ class Forms:
             logger.error("attempted to access unauthorized paths")
             raise PermissionError("Access to the specified file is not allowed")
         try:
-            return json.load(open(safe_path, "r"))
+            with open(safe_path, "r") as form_file:
+                return json.load(form_file)
         except FileNotFoundError:
             raise FileNotFoundError
 
