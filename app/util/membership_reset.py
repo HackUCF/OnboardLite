@@ -37,7 +37,7 @@ class MembershipReset:
         """
         try:
             # Get all users with their Discord data for snapshots
-            statement = select(UserModel).options(selectinload(UserModel.discord))
+            statement = select(UserModel).options(selectinload(UserModel.discord))  # type: ignore[bad-argument-type]
             users = session.exec(statement).all()
 
             reset_count = 0
@@ -126,12 +126,12 @@ class MembershipReset:
             List of membership history records
         """
         try:
-            statement = select(MembershipHistoryModel).options(selectinload(MembershipHistoryModel.user))
+            statement = select(MembershipHistoryModel).options(selectinload(MembershipHistoryModel.user))  # type: ignore[bad-argument-type]
 
             if user_id:
                 statement = statement.where(MembershipHistoryModel.user_id == user_id)
 
-            statement = statement.order_by(MembershipHistoryModel.reset_date).limit(limit)
+            statement = statement.order_by(MembershipHistoryModel.reset_date).limit(limit)  # type: ignore[bad-argument-type]
 
             history_records = session.exec(statement).all()
 

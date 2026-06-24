@@ -67,8 +67,10 @@ async def aapl_gen(
         raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail="Apple Wallet service is not available")
 
     try:
-        statement = select(UserModel).where(UserModel.id == uuid.UUID(current_user["id"])).options(selectinload(UserModel.discord), selectinload(UserModel.ethics_form))
+        statement = select(UserModel).where(UserModel.id == uuid.UUID(current_user["id"])).options(selectinload(UserModel.discord), selectinload(UserModel.ethics_form))  # type: ignore[bad-argument-type]
         user_data = user_to_dict(session.exec(statement).one_or_none())
+        if not isinstance(user_data, dict):
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
 
         pass_data = apple_wallet_generator.generate_pass(user_data)
 
@@ -93,7 +95,7 @@ async def google_gen(
         raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail="Google Wallet service is not available")
 
     try:
-        statement = select(UserModel).where(UserModel.id == uuid.UUID(current_user["id"])).options(selectinload(UserModel.discord), selectinload(UserModel.ethics_form))
+        statement = select(UserModel).where(UserModel.id == uuid.UUID(current_user["id"])).options(selectinload(UserModel.discord), selectinload(UserModel.ethics_form))  # type: ignore[bad-argument-type]
         user_data = session.exec(statement).one_or_none()
 
         if not user_data:

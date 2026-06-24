@@ -153,7 +153,7 @@ async def post_form(
     # Transform the dictionary
     validated_data = transform_dict(validated_data)
 
-    statement = select(UserModel).where(UserModel.id == uuid.UUID(current_user["id"])).options(selectinload(UserModel.discord), selectinload(UserModel.ethics_form))
+    statement = select(UserModel).where(UserModel.id == uuid.UUID(current_user["id"])).options(selectinload(UserModel.discord), selectinload(UserModel.ethics_form))  # type: ignore[bad-argument-type]
     result = session.exec(statement)
     user = result.one_or_none()
 

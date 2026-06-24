@@ -417,6 +417,7 @@ class HorsePass:
     def __init__(self):
         pass
 
+    @staticmethod
     def gen():
         word1, word2, word3, word4 = random.sample(wordlist, 4)
         password = f"{word1}-{word2}-{word3}-{word4}-{random.randint(0, 99):02}"

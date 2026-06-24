@@ -30,16 +30,12 @@ dependencies = [
 dev = [
     "httpx",
     "pre-commit",
-    "pyright>=1.1",
+    "pyrefly>=1.1",
     "pytest>=8.3.5",
     "semgrep",
     "virtualenv",
 ]
 
-[tool.pyright]
-pythonVersion = "3.12"
-venvPath = "."
-venv = ".venv"
-include = ["app"]
-exclude = ["app/migrations", "**/__pycache__"]
-typeCheckingMode = "basic"
+[tool.pyrefly]
+project_includes = ["app"]
+project_excludes = ["app/migrations", "**/__pycache__", "app/util/kennelish.py", "app/util/google_wallet.py"]

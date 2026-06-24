@@ -6,7 +6,7 @@ import os
 import tempfile
 from typing import Any, Dict
 
-from passes_rs_py import generate_pass
+from passes_rs_py import generate_pass  # type: ignore[import-untyped]
 
 from app.util.settings import Settings
 
@@ -26,8 +26,10 @@ class AppleWalletGenerator:
         self.settings = Settings()
 
         # Get certificate and key paths
-        self.key_path = str(self.settings.apple_wallet.pki_dir / "hackucf.key")
-        self.cert_path = str(self.settings.apple_wallet.pki_dir / "hackucf.pem")
+        pki_dir = self.settings.apple_wallet.pki_dir
+        assert pki_dir is not None, "apple_wallet.pki_dir must be configured"
+        self.key_path = str(pki_dir / "hackucf.key")
+        self.cert_path = str(pki_dir / "hackucf.pem")
 
         # Get asset paths
         static_dir = os.path.join(os.path.dirname(__file__), "..", "static", "apple_wallet")

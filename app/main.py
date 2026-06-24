@@ -5,6 +5,8 @@ import os
 import uuid
 from typing import Optional
 
+import sentry_sdk
+
 from fastapi import BackgroundTasks, Cookie, Depends, FastAPI, Request, Response, status
 from fastapi.openapi.utils import get_openapi
 from fastapi.responses import FileResponse, RedirectResponse
@@ -26,11 +28,6 @@ from app.models.user import (
 # Import routes
 from app.routes import admin, api, infra, stripe, wallet
 
-# This check is a little hacky and needs to be documented in the dev environment set up
-# If it's run under docker, the -e flag should set the env variable, but if its local you have to set it yourself
-# Use 'export ENV=development' to set the env variable
-if os.getenv("ENV") == "development":
-    from app.routes import dev_auth
 from app.util.approve import Approve
 
 # Import middleware
@@ -49,8 +46,6 @@ from app.util.kennelish import Kennelish
 # Import options
 from app.util.settings import Settings
 
-if Settings().telemetry.enable:
-    import sentry_sdk
 ### TODO: TEMP
 # os.environ["OAUTHLIB_INSECURE_TRANSPORT"] = "0"
 ###
@@ -80,7 +75,7 @@ def update_discord_model_for_existing_user(user_id: str, discord_data: dict):
         # Create a new session for the background task
         with Session(engine) as session:
             # Get the user with their Discord model
-            statement = select(UserModel).where(UserModel.id == uuid.UUID(user_id)).options(selectinload(UserModel.discord))
+            statement = select(UserModel).where(UserModel.id == uuid.UUID(user_id)).options(selectinload(UserModel.discord))  # type: ignore[bad-argument-type]
             user = session.exec(statement).one_or_none()
 
             if not user or not user.discord:
@@ -89,14 +84,14 @@ def update_discord_model_for_existing_user(user_id: str, discord_data: dict):
 
             # Update Discord model with fresh data from OAuth
             discord_model = user.discord
-            discord_model.email = discord_data.get("email")
+            discord_model.email = discord_data.get("email") or ""
             discord_model.mfa = discord_data.get("mfa_enabled")
             discord_model.avatar = f"https://cdn.discordapp.com/avatars/{discord_data['id']}/{discord_data['avatar']}.png?size=512" if discord_data.get("avatar") else None
             discord_model.banner = f"https://cdn.discordapp.com/banners/{discord_data['id']}/{discord_data['banner']}.png?size=1536" if discord_data.get("banner") else None
             discord_model.color = discord_data.get("accent_color")
             discord_model.nitro = discord_data.get("premium_type")
             discord_model.locale = discord_data.get("locale")
-            discord_model.username = discord_data.get("username")
+            discord_model.username = discord_data.get("username") or ""
 
             session.add(discord_model)
             session.commit()
@@ -171,7 +166,7 @@ def global_context(request: Request):
 
 
 # Register the context processor with Jinja2
-templates.env.globals.update(global_context=global_context)
+templates.env.globals.update(global_context=global_context)  # type: ignore[bad-argument-type]
 
 app.mount("/static", StaticFiles(directory="app/static"), name="static")
 
@@ -195,10 +190,8 @@ app.include_router(admin.router)
 app.include_router(wallet.router)
 app.include_router(infra.router)
 
-# This check is a little hacky and needs to be documented in the dev environment set up
-# If it's run under docker, the -e flag should set the env variable, but if its local you have to set it yourself
-# Use 'export ENV=development' to set the env variable
 if os.getenv("ENV") == "development":
+    from app.routes import dev_auth
     logger.warning("loading dev endpoints")
     app.include_router(dev_auth.router)
 
@@ -235,8 +228,8 @@ def on_startup():
 async def index(request: Request, token: Optional[str] = Cookie(None)):
     is_full_member = False
     is_admin = False
-    user_id = None
-    infra_email = None
+    user_id: str | None = None
+    infra_email: bool | None = None
 
     if token is not None:
         try:
@@ -247,10 +240,10 @@ async def index(request: Request, token: Optional[str] = Cookie(None)):
                 algorithms=Settings().jwt.algorithm,
             )
             user_jwt = user_jwt.claims
-            is_full_member: bool = user_jwt.get("is_full_member", False)
-            is_admin: bool = user_jwt.get("sudo", False)
-            user_id: bool = user_jwt.get("id", None)
-            infra_email: bool = user_jwt.get("infra_email", None)
+            is_full_member = user_jwt.get("is_full_member", False)
+            is_admin = user_jwt.get("sudo", False)
+            user_id = user_jwt.get("id", None)
+            infra_email = user_jwt.get("infra_email", None)
         except Exception as decode_error:
             # Token decode error - invalid/expired token, treat as unauthenticated
             logger.debug(f"JWT token decode error: {decode_error}")
@@ -278,7 +271,7 @@ This is what is linked to by Onboard.
 
 
 @app.get("/discord/new/")
-async def oauth_transformer(redir: str = None):
+async def oauth_transformer(redir: str | None = None):
     if not redir:
         redir = sign_redirect_url("/join/2")
 
@@ -312,8 +305,8 @@ async def oauth_transformer_new(
     request: Request,
     response: Response,
     background_tasks: BackgroundTasks,
-    code: str = None,
-    state: str = None,
+    code: str | None = None,
+    state: str | None = None,
     redir_endpoint: Optional[str] = Cookie(None),
     oauth_state: Optional[str] = Cookie(None),
     session: Session = Depends(get_session),
@@ -354,7 +347,7 @@ async def oauth_transformer_new(
     token = oauth.fetch_token(
         "https://discord.com/api/oauth2/token",
         client_id=Settings().discord.client_id,
-        client_secret=Settings().discord.secret.get_secret_value(),
+        client_secret=Settings().discord.secret.get_secret_value(),  # type: ignore[attribute-error]
         # authorization_response=code
         code=code,
     )
@@ -457,7 +450,7 @@ async def profile(
     current_user: CurrentMember,
     session: Session = Depends(get_session),
 ):
-    statement = select(UserModel).where(UserModel.id == uuid.UUID(current_user["id"])).options(selectinload(UserModel.discord), selectinload(UserModel.ethics_form))
+    statement = select(UserModel).where(UserModel.id == uuid.UUID(current_user["id"])).options(selectinload(UserModel.discord), selectinload(UserModel.ethics_form))  # type: ignore[bad-argument-type]
     user_data = user_to_dict(session.exec(statement).one_or_none())
 
     # Re-run approval workflow in background.
@@ -492,7 +485,7 @@ async def forms(
 
     # Get data from SqlModel
 
-    statement = select(UserModel).where(UserModel.id == uuid.UUID(current_user.get("id"))).options(selectinload(UserModel.discord))
+    statement = select(UserModel).where(UserModel.id == uuid.UUID(current_user.get("id"))).options(selectinload(UserModel.discord))  # type: ignore[bad-argument-type]
     user_data = session.exec(statement).one_or_none()
     # Have Kennelish parse the data.
     user_data = user_to_dict(user_data)

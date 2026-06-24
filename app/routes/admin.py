@@ -126,7 +126,7 @@ async def admin_get_single(
     if member_id is None:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Missing member_id parameter")
 
-    statement = select(UserModel).where(UserModel.id == member_id).options(selectinload(UserModel.discord), selectinload(UserModel.ethics_form))
+    statement = select(UserModel).where(UserModel.id == member_id).options(selectinload(UserModel.discord), selectinload(UserModel.ethics_form))  # type: ignore[bad-argument-type]
     user_data = user_to_dict(session.exec(statement).one_or_none())
 
     if not user_data:
@@ -149,7 +149,7 @@ async def admin_get_snowflake(
     if discord_id == "FAIL":
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Missing discord_id parameter")
 
-    statement = select(UserModel).where(UserModel.discord_id == discord_id).options(selectinload(UserModel.discord), selectinload(UserModel.ethics_form))
+    statement = select(UserModel).where(UserModel.discord_id == discord_id).options(selectinload(UserModel.discord), selectinload(UserModel.ethics_form))  # type: ignore[bad-argument-type]
     data = user_to_dict(session.exec(statement).one_or_none())
     # if not data:
     #    # Try a legacy-user-ID search (deprecated, but still neccesary)
@@ -209,13 +209,13 @@ async def admin_edit(
 
     member_id = input_data.id
 
-    statement = select(UserModel).where(UserModel.id == member_id).options(selectinload(UserModel.discord), selectinload(UserModel.ethics_form))
+    statement = select(UserModel).where(UserModel.id == member_id).options(selectinload(UserModel.discord), selectinload(UserModel.ethics_form))  # type: ignore[bad-argument-type]
     member_data = session.exec(statement).one_or_none()
 
     if not member_data:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
-    input_data = user_to_dict(input_data)
-    user_update_instance(member_data, input_data)
+    input_dict = user_to_dict(input_data)
+    user_update_instance(member_data, input_dict)  # type: ignore[bad-argument-type]
 
     session.add(member_data)
     session.commit()
@@ -231,7 +231,7 @@ async def admin_list(
     """
     API endpoint that dumps all users as JSON.
     """
-    statement = select(UserModel).options(selectinload(UserModel.discord), selectinload(UserModel.ethics_form))
+    statement = select(UserModel).options(selectinload(UserModel.discord), selectinload(UserModel.ethics_form))  # type: ignore[bad-argument-type]
     users = session.exec(statement)
     data = []
     for user in users:
@@ -250,7 +250,7 @@ async def admin_list_csv(
     """
     API endpoint that dumps all users as CSV.
     """
-    statement = select(UserModel).options(selectinload(UserModel.discord), selectinload(UserModel.ethics_form))
+    statement = select(UserModel).options(selectinload(UserModel.discord), selectinload(UserModel.ethics_form))  # type: ignore[bad-argument-type]
     data = session.exec(statement)
 
     # Initialize a StringIO object to write CSV data into memory
@@ -285,6 +285,7 @@ async def admin_list_csv(
     # Write user data rows
     for user in data:
         user_dict = user_to_dict(user)
+        assert isinstance(user_dict, dict)
         row = [
             user_dict.get("id"),
             user_dict.get("first_name"),
@@ -433,8 +434,8 @@ async def migrate_discord_account(
                 select(UserModel)
                 .where(UserModel.id == old_user_id)
                 .options(
-                    selectinload(UserModel.discord),
-                    selectinload(UserModel.membership_history),
+                    selectinload(UserModel.discord),  # type: ignore[bad-argument-type]
+                    selectinload(UserModel.membership_history),  # type: ignore[bad-argument-type]
                 )
             ).one_or_none()
 
@@ -446,9 +447,9 @@ async def migrate_discord_account(
                 select(UserModel)
                 .where(UserModel.discord_id == new_discord_id)
                 .options(
-                    selectinload(UserModel.discord),
-                    selectinload(UserModel.ethics_form),
-                    selectinload(UserModel.membership_history),
+                    selectinload(UserModel.discord),  # type: ignore[bad-argument-type]
+                    selectinload(UserModel.ethics_form),  # type: ignore[bad-argument-type]
+                    selectinload(UserModel.membership_history),  # type: ignore[bad-argument-type]
                 )
             ).one_or_none()
 

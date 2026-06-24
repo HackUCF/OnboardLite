@@ -18,12 +18,12 @@ from app.util.settings import Settings
 
 logger = logging.getLogger(__name__)
 
-router = APIRouter(prefix="/dev", tags=["API"], responses=Errors.basic_http())
+router = APIRouter(prefix="/dev", tags=["API"], responses=Errors.basic_http())  # type: ignore[bad-argument-type]
 
 
 @router.get("/user/")
 async def create_dev_user(request: Request, session: Session = Depends(get_session), sudo: bool = False):
-    if request.client.host not in ["127.0.0.1", "localhost"]:
+    if not request.client or request.client.host not in ["127.0.0.1", "localhost"]:
         return Errors.generate(
             request,
             403,

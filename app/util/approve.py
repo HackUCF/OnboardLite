@@ -46,6 +46,7 @@ class Approve:
         logger.debug(f"sanitize_name: '{name}' -> '{result}'")
         return result
 
+    @staticmethod
     def provision_infra(
         member_id: uuid.UUID,
         user_data,
@@ -56,10 +57,12 @@ class Approve:
         last_name = Approve.sanitize_name(user_data.surname)
 
         password = HorsePass.gen()
+        keycloak_password = Settings().keycloak.password
+        assert keycloak_password is not None
         admin = KeycloakAdmin(
             server_url=Settings().keycloak.url,
             username=Settings().keycloak.username,
-            password=Settings().keycloak.password.get_secret_value(),
+            password=keycloak_password.get_secret_value(),
             realm_name=Settings().keycloak.realm,
             verify=True,
         )
@@ -115,7 +118,7 @@ class Approve:
     def approve_member(member_id: uuid.UUID):
         with Session(engine) as session:
             logger.info(f"Re-running approval for {str(member_id)}")
-            statement = select(UserModel).where(UserModel.id == member_id).options(selectinload(UserModel.discord), selectinload(UserModel.ethics_form))
+            statement = select(UserModel).where(UserModel.id == member_id).options(selectinload(UserModel.discord), selectinload(UserModel.ethics_form))  # type: ignore[bad-argument-type]
 
             result = session.exec(statement)
             user_data = result.one_or_none()

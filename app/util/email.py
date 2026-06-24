@@ -11,9 +11,12 @@ from app.util.settings import Settings
 
 logger = logging.getLogger()
 
+email: str | None = None
+password: str | None = None
+smtp_host: str | None = None
 if Settings().email.enable:
     email = Settings().email.email
-    password = Settings().email.password.get_secret_value()
+    password = Settings().email.password.get_secret_value()  # type: ignore[attribute-error]
     smtp_host = Settings().email.smtp_server
 
 
@@ -22,13 +25,14 @@ class Email:
     This function handles sending emails.
     """
 
+    @staticmethod
     def send_email(subject, body, recipient):
         if not Settings().email.enable:
             return
         msg = MIMEMultipart("alternative")
-        msg["Subject"] = subject
-        msg["From"] = email
-        msg["To"] = recipient
+        msg["Subject"] = subject  # type: ignore[unsupported-operation]
+        msg["From"] = email  # type: ignore[unsupported-operation]
+        msg["To"] = recipient  # type: ignore[unsupported-operation]
         text = body
         parser = commonmark.Parser()
         ast = parser.parse(body)
@@ -39,8 +43,8 @@ class Email:
         msg.attach(part1)
         msg.attach(part2)
         try:
-            with smtplib.SMTP_SSL(smtp_host, 465) as smtp_server:
-                smtp_server.login(email, password)
-                smtp_server.sendmail(email, recipient, msg.as_string())
+            with smtplib.SMTP_SSL(smtp_host, 465) as smtp_server:  # type: ignore[bad-argument-type]
+                smtp_server.login(email, password)  # type: ignore[bad-argument-type]
+                smtp_server.sendmail(email, recipient, msg.as_string())  # type: ignore[bad-argument-type]
         except Exception as e:
             logger.error(f"Error sending email: {e}")

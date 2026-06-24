@@ -149,6 +149,7 @@ elif onboard_env == "dev":
     discord_config = DiscordConfig(enable=False, redirect_base="localhost")
 else:
     logger.warn("Missing discord config")
+    discord_config = DiscordConfig(enable=False, redirect_base="localhost")
 
 
 class StripeConfig(BaseModel):
@@ -193,6 +194,7 @@ elif onboard_env == "dev":
     stripe_config = StripeConfig(pause_payments=True)
 else:
     logger.warn("Missing Stripe config")
+    stripe_config = StripeConfig(pause_payments=True)
 
 
 class GoogleWalletConfig(BaseModel):
@@ -226,6 +228,7 @@ elif onboard_env == "dev":
     google_wallet_config = GoogleWalletConfig(enable=False)
 else:
     logger.warn("Missing GWallet config")
+    google_wallet_config = GoogleWalletConfig(enable=False)
 
 
 class EmailConfig(BaseModel):
@@ -261,6 +264,7 @@ elif onboard_env == "dev":
     email_config = EmailConfig(enable=False)
 else:
     logger.warn("Missing email config")
+    email_config = EmailConfig(enable=False)
 
 
 class JwtConfig(BaseModel):
@@ -277,27 +281,30 @@ class JwtConfig(BaseModel):
 
     model_config = {"arbitrary_types_allowed": True}
 
-    secret: SecretStr = constr(min_length=32)
+    secret: SecretStr = constr(min_length=32)  # type: ignore[assignment]
     algorithm: Optional[str] = Field("HS256")
     lifetime_user: Optional[int] = Field(9072000)
     lifetime_sudo: Optional[int] = Field(86400)
-    key_object: Optional[OctKey] = Field(default=None, exclude=True)
-    redir_key: Optional[OctKey] = Field(default=None, exclude=True)
-    oauth_key: Optional[OctKey] = Field(default=None, exclude=True)
+    key_object: OctKey = Field(exclude=True)
+    redir_key: OctKey = Field(exclude=True)
+    oauth_key: OctKey = Field(exclude=True)
 
     def __init__(self, **data):
-        super().__init__(**data)
-        # Create JWT key object during initialization
+        secret = data.get("secret")
+        secret_str = secret.get_secret_value() if isinstance(secret, SecretStr) else str(secret)
         try:
-            self.key_object = OctKey.import_key(self.secret.get_secret_value())
-            self.redir_key = OctKey.import_key(self.secret.get_secret_value() + "redir")
-            self.oauth_key = OctKey.import_key(self.secret.get_secret_value() + "oauth")
+            data["key_object"] = OctKey.import_key(secret_str)
+            data["redir_key"] = OctKey.import_key(secret_str + "redir")
+            data["oauth_key"] = OctKey.import_key(secret_str + "oauth")
         except Exception as e:
             raise ValueError(f"Invalid JWT secret key: {e}") from e
+        super().__init__(**data)
 
 
 if settings.get("jwt"):
     jwt_config = JwtConfig(**settings["jwt"])
+elif onboard_env == "dev":
+    jwt_config = JwtConfig(secret="dev-secret-key-for-testing-only-!!")  # nosec
 
 
 class InfraConfig(BaseModel):
@@ -316,6 +323,8 @@ class InfraConfig(BaseModel):
 if settings.get("infra"):
     infra_config = InfraConfig(**settings["infra"])
 elif onboard_env == "dev":
+    infra_config = InfraConfig()
+else:
     infra_config = InfraConfig()
 
 
@@ -343,6 +352,7 @@ elif onboard_env == "dev":
     keycloak_config = KeycloakConfig(enable=False)
 else:
     logger.warn("Missing Keycloak Config")
+    keycloak_config = KeycloakConfig(enable=False)
 
 
 class TelemetryConfig(BaseModel):
@@ -371,6 +381,7 @@ elif onboard_env == "dev":
     database_config = DatabaseConfig(url="sqlite:///:memory:")
 else:
     logger.warn("Missing database config")
+    database_config = DatabaseConfig(url="sqlite:///:memory:")
 
 
 class HttpConfig(BaseModel):
@@ -383,6 +394,7 @@ elif onboard_env == "dev":
     http_config = HttpConfig(domain="localhost:8000")
 else:
     logger.warn("Missing http config")
+    http_config = HttpConfig(domain="localhost:8000")
 
 
 class ApiKeyConfig(BaseModel):
@@ -442,15 +454,15 @@ class Settings(BaseSettings, metaclass=SingletonBaseSettingsMeta):
     discord: DiscordConfig = discord_config
     stripe: StripeConfig = stripe_config
     email: EmailConfig = email_config
-    jwt: JwtConfig = jwt_config
+    jwt: JwtConfig = jwt_config  # type: ignore[unbound-name]
     database: DatabaseConfig = database_config
     infra: InfraConfig = infra_config
     http: HttpConfig = http_config
     keycloak: KeycloakConfig = keycloak_config
     google_wallet: GoogleWalletConfig = google_wallet_config
-    telemetry: Optional[TelemetryConfig] = telemetry_config
+    telemetry: TelemetryConfig = telemetry_config
     apple_wallet: AppleWalletConfig = apple_wallet_config
     security: SecurityConfig = security_config
     api_keys: List[ApiKeyConfig] = api_keys_config
     env: Optional[str] = onboard_env
-    loglevel: Optional[str] = loglevel
+    loglevel: str = loglevel

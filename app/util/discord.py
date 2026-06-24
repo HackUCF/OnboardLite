@@ -9,9 +9,10 @@ from app.util.settings import Settings
 
 logger = logging.getLogger(__name__)
 
+headers: dict[str, str] = {}
 if Settings().discord.enable:
     headers = {
-        "Authorization": f"Bot {Settings().discord.bot_token.get_secret_value()}",
+        "Authorization": f"Bot {Settings().discord.bot_token.get_secret_value()}",  # type: ignore[attribute-error]
         "Content-Type": "application/json",
         "X-Audit-Log-Reason": "Hack@UCF OnboardLite Bot",
     }
@@ -25,6 +26,7 @@ class Discord:
     def __init__(self):
         pass
 
+    @staticmethod
     def assign_role(discord_id, role_id):
         if not Settings().discord.enable:
             return
@@ -40,6 +42,7 @@ class Discord:
             logger.exception(f"Failed to assign role {role_id} to {discord_id}")
         return req.status_code < 400
 
+    @staticmethod
     def get_dm_channel_id(discord_id):
         discord_id = str(discord_id)
 
@@ -54,6 +57,7 @@ class Discord:
 
         return resp.get("id", None)
 
+    @staticmethod
     def send_message(discord_id, message):
         if not Settings().discord.enable:
             return
@@ -76,7 +80,7 @@ class Discord:
         # Make user join the Hack@UCF Discord, if it's their first rodeo.
         logger.info(f"Joining {discord_id} to Hack@UCF Discord")
         headers = {
-            "Authorization": f"Bot {Settings().discord.bot_token.get_secret_value()}",
+            "Authorization": f"Bot {Settings().discord.bot_token.get_secret_value()}",  # type: ignore[attribute-error]
             "Content-Type": "application/json",
             "X-Audit-Log-Reason": "Hack@UCF OnboardLite Bot",
         }
