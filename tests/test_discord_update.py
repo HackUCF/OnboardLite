@@ -1,23 +1,19 @@
 # SPDX-License-Identifier: MIT
 # Copyright (c) 2024 Collegiate Cyber Defense Club
 import uuid
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import MagicMock, patch
 
 import pytest
-from fastapi.testclient import TestClient
 from sqlmodel import Session
 
 from app.main import update_discord_model_for_existing_user
-from app.models.user import DiscordModel, UserModel
+from app.models.user import UserModel
 
 
 def test_update_discord_model_for_existing_user(session: Session, test_user: UserModel):
     """Test that the background task updates Discord model for existing users"""
 
     # Setup test data - simulate Discord API response
-    original_username = test_user.discord.username
-    original_avatar = test_user.discord.avatar
-
     discord_data = {
         "id": test_user.discord_id,
         "email": "updated_email@example.com",
