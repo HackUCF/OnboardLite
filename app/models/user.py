@@ -13,12 +13,12 @@ from sqlmodel import Field, Relationship, SQLModel
 class DiscordModel(SQLModel, table=True):
     id: Optional[int] = Field(default=None, primary_key=True)
     email: str
-    mfa: Optional[bool]
-    avatar: Optional[str]
-    banner: Optional[str]
-    color: Optional[int]
-    nitro: Optional[int]
-    locale: Optional[str]
+    mfa: Optional[bool] = None
+    avatar: Optional[str] = None
+    banner: Optional[str] = None
+    color: Optional[int] = None
+    nitro: Optional[int] = None
+    locale: Optional[str] = None
     username: str
 
     user_id: Optional[uuid.UUID] = Field(default=None, foreign_key="usermodel.id", unique=True)

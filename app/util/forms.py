@@ -10,19 +10,17 @@ logger = logging.getLogger(__name__)
 
 
 def is_path_allowed(user_path: str, allowed_dir: str) -> bool:
-    # Convert to absolute paths
-    user_path = Path(user_path).resolve()
-    allowed_dir = Path(allowed_dir).resolve()
-
+    resolved_path = Path(user_path).resolve()
+    resolved_dir = Path(allowed_dir).resolve()
     try:
-        # Check if the user path is within the allowed directory
-        user_path.relative_to(allowed_dir)
+        resolved_path.relative_to(resolved_dir)
         return True
     except ValueError:
         return False
 
 
 class Forms:
+    @staticmethod
     def get_form_body(file="1"):
         form_file = os.path.join(os.getcwd(), "app/forms", f"{file}.json")
         allowed_paths = "app/forms"

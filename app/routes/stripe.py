@@ -25,7 +25,7 @@ router = APIRouter(prefix="/pay", tags=["API"])
 
 if not Settings().stripe.pause_payments:
     # Set Stripe API key.
-    stripe.api_key = Settings().stripe.api_key.get_secret_value()  # pyright: ignore[reportOptionalMemberAccess]
+    stripe.api_key = Settings().stripe.api_key.get_secret_value()  # type: ignore[attribute-error]
 
 
 @router.get("/")
@@ -37,7 +37,7 @@ async def get_root(
     """
     Get API information.
     """
-    statement = select(UserModel).where(UserModel.id == uuid.UUID(current_user["id"])).options(selectinload(UserModel.discord))  # pyright: ignore[reportArgumentType]
+    statement = select(UserModel).where(UserModel.id == uuid.UUID(current_user["id"])).options(selectinload(UserModel.discord))  # type: ignore[bad-argument-type]
     user_data = session.exec(statement).one_or_none()
     if user_data is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
@@ -80,14 +80,14 @@ async def create_checkout_session(
             line_items=[
                 {
                     # Provide the exact Price ID (for example, pr_1234) of the product you want to sell
-                    "price": Settings().stripe.price_id,  # pyright: ignore[reportArgumentType]
+                    "price": Settings().stripe.price_id,  # type: ignore[bad-argument-type]
                     "quantity": 1,
                 },
             ],
             customer_email=stripe_email,
             mode="payment",
-            success_url=Settings().stripe.url_success,  # pyright: ignore[reportArgumentType]
-            cancel_url=Settings().stripe.url_failure,  # pyright: ignore[reportArgumentType]
+            success_url=Settings().stripe.url_success,  # type: ignore[bad-argument-type]
+            cancel_url=Settings().stripe.url_failure,  # type: ignore[bad-argument-type]
             metadata={"user_id": str(user_id)},
         )
     except Exception as e:
@@ -104,7 +104,7 @@ async def webhook(request: Request, background_tasks: BackgroundTasks, session: 
     payload = await request.body()
     sig_header = request.headers.get("stripe-signature")
     event = None
-    endpoint_secret = Settings().stripe.webhook_secret.get_secret_value()  # pyright: ignore[reportOptionalMemberAccess]
+    endpoint_secret = Settings().stripe.webhook_secret.get_secret_value()  # type: ignore[attribute-error]
 
     try:
         event = stripe.Webhook.construct_event(payload, sig_header, endpoint_secret)

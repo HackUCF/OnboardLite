@@ -99,7 +99,7 @@ def _authenticate_jwt_cookie(token: str) -> dict:
         user_jwt = jwt.decode(
             token,
             Settings().jwt.key_object,
-            algorithms=[Settings().jwt.algorithm],
+            algorithms=[Settings().jwt.algorithm or "HS256"],
         )
         return user_jwt.claims
     except Exception as e:
@@ -262,7 +262,7 @@ def verify_redirect_url(signed_url: str) -> str:
         decoded = jwt.decode(
             signed_url,
             Settings().jwt.redir_key,
-            algorithms=[Settings().jwt.algorithm],
+            algorithms=[Settings().jwt.algorithm or "HS256"],
         )
 
         payload = decoded.claims
