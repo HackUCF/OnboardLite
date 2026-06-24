@@ -58,7 +58,8 @@ class Approve:
 
         password = HorsePass.gen()
         keycloak_password = Settings().keycloak.password
-        assert keycloak_password is not None
+        if keycloak_password is None:
+            raise RuntimeError("Keycloak password is required to provision infra")
         admin = KeycloakAdmin(
             server_url=Settings().keycloak.url,
             username=Settings().keycloak.username,

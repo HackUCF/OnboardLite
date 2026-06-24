@@ -15,8 +15,11 @@ email: str | None = None
 password: str | None = None
 smtp_host: str | None = None
 if Settings().email.enable:
+    email_password = Settings().email.password
+    if email_password is None:
+        raise RuntimeError("Email is enabled but password is not configured")
     email = Settings().email.email
-    password = Settings().email.password.get_secret_value()  # type: ignore[attribute-error]
+    password = email_password.get_secret_value()
     smtp_host = Settings().email.smtp_server
 
 
@@ -28,6 +31,9 @@ class Email:
     @staticmethod
     def send_email(subject, body, recipient):
         if not Settings().email.enable:
+            return
+        if email is None or password is None or smtp_host is None:
+            logger.error("Email is enabled but configuration is incomplete; skipping send")
             return
         msg = MIMEMultipart("alternative")
         msg["Subject"] = subject  # type: ignore[unsupported-operation]
@@ -43,8 +49,8 @@ class Email:
         msg.attach(part1)
         msg.attach(part2)
         try:
-            with smtplib.SMTP_SSL(smtp_host, 465) as smtp_server:  # type: ignore[bad-argument-type]
-                smtp_server.login(email, password)  # type: ignore[bad-argument-type]
-                smtp_server.sendmail(email, recipient, msg.as_string())  # type: ignore[bad-argument-type]
+            with smtplib.SMTP_SSL(smtp_host, 465) as smtp_server:
+                smtp_server.login(email, password)
+                smtp_server.sendmail(email, recipient, msg.as_string())
         except Exception as e:
             logger.error(f"Error sending email: {e}")

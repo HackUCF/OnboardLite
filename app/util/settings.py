@@ -10,7 +10,7 @@ from typing import List, Optional
 
 import yaml
 from joserfc.jwk import OctKey
-from pydantic import BaseModel, Field, SecretStr, constr, model_validator
+from pydantic import BaseModel, Field, SecretStr, model_validator
 from pydantic_settings import BaseSettings
 from requests_oauthlib.oauth1_session import OAuth1
 
@@ -281,7 +281,7 @@ class JwtConfig(BaseModel):
 
     model_config = {"arbitrary_types_allowed": True}
 
-    secret: SecretStr = constr(min_length=32)  # type: ignore[assignment]
+    secret: SecretStr = Field(min_length=32)
     algorithm: Optional[str] = Field("HS256")
     lifetime_user: Optional[int] = Field(9072000)
     lifetime_sudo: Optional[int] = Field(86400)
