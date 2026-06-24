@@ -22,7 +22,7 @@ def is_path_allowed(user_path: str, allowed_dir: str) -> bool:
 class Forms:
     @staticmethod
     def get_form_body(file="1"):
-        form_file = os.path.join(os.getcwd(), "app/forms", f"{file}.json")
+        form_file = os.path.join(os.getcwd(), "app/forms", f"{Path(file).name}.json")
         allowed_paths = "app/forms"
         if not is_path_allowed(form_file, allowed_paths):
             logger.error("attempted to access unauthorized paths")
