@@ -12,17 +12,12 @@ import yaml
 from joserfc.jwk import OctKey
 from pydantic import BaseModel, Field, SecretStr, model_validator
 from pydantic_settings import BaseSettings
-from requests_oauthlib.oauth1_session import OAuth1
 
 logger = logging.getLogger(__name__)
 
 config_file = pathlib.Path(os.getenv("ONBOARD_CONFIG_FILE", "config.yml")).resolve()
 onboard_env = os.getenv("ONBOARD_ENV", "prod")
 loglevel = os.getenv("ONBOARD_LOGLEVEL", "INFO")
-
-if onboard_env == "dev":
-    import hashlib
-    import socket
 
 
 def BitwardenConfig(settings: dict):

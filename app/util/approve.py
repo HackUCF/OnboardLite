@@ -143,14 +143,14 @@ class Approve:
                 # Create an Infra account.
                 try:
                     creds = Approve.provision_infra(member_id, user_data)
-                except:
+                except Exception:
                     logger.exception("Failed to provision user account")
                     creds = {"username": None, "password": None}
 
                 # Assign the Dues-Paying Member role
                 try:
                     Discord.assign_role(discord_id, Settings().discord.member_role)
-                except:
+                except Exception:
                     logger.exception("Failed to assign role")
 
                 # Send Discord message saying they are a member
