@@ -305,6 +305,8 @@ if settings.get("jwt"):
     jwt_config = JwtConfig(**settings["jwt"])
 elif onboard_env == "dev":
     jwt_config = JwtConfig(secret="dev-secret-key-for-testing-only-!!")  # nosec
+else:
+    raise RuntimeError("JWT configuration is required")
 
 
 class InfraConfig(BaseModel):
@@ -454,7 +456,7 @@ class Settings(BaseSettings, metaclass=SingletonBaseSettingsMeta):
     discord: DiscordConfig = discord_config
     stripe: StripeConfig = stripe_config
     email: EmailConfig = email_config
-    jwt: JwtConfig = jwt_config  # type: ignore[unbound-name]
+    jwt: JwtConfig = jwt_config
     database: DatabaseConfig = database_config
     infra: InfraConfig = infra_config
     http: HttpConfig = http_config

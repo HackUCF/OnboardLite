@@ -285,7 +285,9 @@ async def admin_list_csv(
     # Write user data rows
     for user in data:
         user_dict = user_to_dict(user)
-        assert isinstance(user_dict, dict)
+        if not isinstance(user_dict, dict):
+            logger.warning(f"Skipping user {getattr(user, 'id', '?')} — could not serialize")
+            continue
         row = [
             user_dict.get("id"),
             user_dict.get("first_name"),

@@ -192,6 +192,7 @@ app.include_router(infra.router)
 
 if os.getenv("ENV") == "development":
     from app.routes import dev_auth
+
     logger.warning("loading dev endpoints")
     app.include_router(dev_auth.router)
 
@@ -229,7 +230,7 @@ async def index(request: Request, token: Optional[str] = Cookie(None)):
     is_full_member = False
     is_admin = False
     user_id: str | None = None
-    infra_email: bool | None = None
+    infra_email: str | None = None
 
     if token is not None:
         try:
