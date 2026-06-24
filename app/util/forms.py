@@ -9,26 +9,27 @@ from typing import DefaultDict
 logger = logging.getLogger(__name__)
 
 
-def is_path_allowed(user_path: str, allowed_dir: str) -> bool:
+def resolve_within(user_path: str, allowed_dir: str) -> Path | None:
+    """Resolve user_path once and return it only if it's inside allowed_dir."""
     resolved_path = Path(user_path).resolve()
     resolved_dir = Path(allowed_dir).resolve()
     try:
         resolved_path.relative_to(resolved_dir)
-        return True
+        return resolved_path
     except ValueError:
-        return False
+        return None
 
 
 class Forms:
     @staticmethod
     def get_form_body(file="1"):
-        form_file = os.path.join(os.getcwd(), "app/forms", f"{Path(file).name}.json")
-        allowed_paths = "app/forms"
-        if not is_path_allowed(form_file, allowed_paths):
+        candidate = os.path.join(os.getcwd(), "app/forms", f"{Path(file).name}.json")
+        safe_path = resolve_within(candidate, "app/forms")
+        if safe_path is None:
             logger.error("attempted to access unauthorized paths")
             raise PermissionError("Access to the specified file is not allowed")
         try:
-            return json.load(open(form_file, "r"))
+            return json.load(open(safe_path, "r"))
         except FileNotFoundError:
             raise FileNotFoundError
 
