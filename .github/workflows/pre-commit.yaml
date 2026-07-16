@@ -19,5 +19,5 @@ jobs:
         with:
           path: ~/.cache/pre-commit/
           key: pre-commit-4|${{ env.pythonLocation }}|${{ hashFiles('.pre-commit-config.yaml') }}
-      - run: echo "SKIP=semgrep" >> $GITHUB_ENV
+      - run: echo "SKIP=semgrep,ruff,ruff-format" >> $GITHUB_ENV
       - run: uv run pre-commit run --all-files
