@@ -2,6 +2,7 @@
 # Copyright (c) 2024 Collegiate Cyber Defense Club
 import logging
 import uuid
+from datetime import datetime
 
 import stripe
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Request, status
@@ -46,6 +47,7 @@ async def get_root(
     user_data = user_to_dict(user_data)
 
     paused_payments = Settings().stripe.pause_payments
+    dues_restart_soon = datetime.utcnow().month > 4
 
     return templates.TemplateResponse(
         request,
@@ -54,6 +56,7 @@ async def get_root(
             "user_data": user_data,
             "did_pay_dues": did_pay_dues,
             "paused_payments": paused_payments,
+            "dues_restart_soon": dues_restart_soon,
         },
     )
 

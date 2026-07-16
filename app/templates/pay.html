@@ -30,6 +30,12 @@
                 <li>A free t-shirt.</li>
             </ul>
             <p>While we highly recommend paying dues, they are not required for most of our events.</p>
+            {% if dues_restart_soon and not did_pay_dues %}
+            <div class="alert">
+                <span class="closebtn dismiss-alert">&times;</span>
+                Heads up: membership dues reset annually in August. If you pay now, you'll need to pay dues again once the new membership year starts in August.
+            </div>
+            {% endif %}
             <p><i>Want to pay dues in person?</i> Press Skip and contact an Executive at our next event.</p>
             <div class="entry">
                 <div>
