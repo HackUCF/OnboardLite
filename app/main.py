@@ -1,13 +1,11 @@
 # SPDX-License-Identifier: MIT
 # Copyright (c) 2024 Collegiate Cyber Defense Club
-import json
 import logging
 import os
 import uuid
 from typing import Optional
 
 import sentry_sdk
-
 from fastapi import BackgroundTasks, Cookie, Depends, FastAPI, Request, Response, status
 from fastapi.openapi.utils import get_openapi
 from fastapi.responses import FileResponse, RedirectResponse
@@ -28,7 +26,6 @@ from app.models.user import (
 
 # Import routes
 from app.routes import admin, api, infra, stripe, wallet
-
 from app.util.approve import Approve
 
 # Import middleware
