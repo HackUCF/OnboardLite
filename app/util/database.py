@@ -43,6 +43,7 @@ def set_sqlite_pragmas(dbapi_connection, connection_record):
     finally:
         cursor.close()
 
+
 if "sqlite:///:memory:" in DATABASE_URL:
     SQLModel.metadata.create_all(engine)
     logger.info("Tables created in SQLite in-memory database.")
