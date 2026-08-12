@@ -1,0 +1,133 @@
+{% extends 'base.html' %}
+
+{% block title %} Membership Settings - Hack@UCF {% endblock %}
+
+{% block head %}
+<style>
+  .settings_section {
+    margin: 2rem auto;
+    max-width: 60rem;
+    padding: 0 1rem;
+  }
+
+  .settings_section table {
+    width: 100%;
+    border-collapse: collapse;
+  }
+
+  .settings_section th,
+  .settings_section td {
+    text-align: left;
+    padding: 0.4rem 0.6rem;
+    border-bottom: 1px solid rgba(128, 128, 128, 0.3);
+    font-size: 0.95rem;
+  }
+
+  .settings_section .danger {
+    border: 1px solid rgba(200, 60, 60, 0.6);
+    border-radius: 8px;
+    padding: 1rem;
+  }
+
+  .settings_section input[type="text"] {
+    padding: 0.4rem;
+    min-width: 20rem;
+    max-width: 100%;
+  }
+
+  .muted {
+    opacity: 0.7;
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="nav">
+  <div class="nav_inner">
+    <img src="/static/admin_logo.svg" />
+    <div class="right">Signed in as @{{ name }}</div>
+  </div>
+</div>
+
+<div class="settings_section">
+  <div><a href="/admin/" class="btn searchbtn">Back to Roster</a></div>
+  <h1>Membership Settings</h1>
+
+  <h2>Dues Reset Status</h2>
+  <table>
+    <tbody>
+      <tr>
+        <th>Last reset</th>
+        <td>
+          {% if last_reset %}{{ last_reset.strftime('%Y-%m-%d %H:%M UTC') }}
+          {% else %}<span class="muted">never</span>{% endif %}
+        </td>
+      </tr>
+      <tr>
+        <th>Reset events recorded</th>
+        <td>{{ summary.number_of_reset_events }}</td>
+      </tr>
+      <tr>
+        <th>Members archived across all resets</th>
+        <td>{{ summary.total_reset_records }}</td>
+      </tr>
+      <tr>
+        <th>"Dues reset soon" banner</th>
+        <td>
+          {% if dues_restart_soon %}
+          Showing on the pay page
+          {% else %}
+          <span class="muted">Hidden</span>
+          {% endif %}
+        </td>
+      </tr>
+    </tbody>
+  </table>
+  <p class="muted">
+    The banner shows from April onwards until a reset is recorded for the
+    current year. Running the reset below turns it off until next April.
+  </p>
+
+  <h2>Recent Payments</h2>
+  <table>
+    <thead>
+      <tr>
+        <th>Date</th>
+        <th>Member</th>
+        <th>Source</th>
+        <th>Amount</th>
+        <th>Note</th>
+      </tr>
+    </thead>
+    <tbody id="paymentsBody">
+      <tr>
+        <td colspan="5" class="muted">Loading…</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <h2>Annual Membership Reset</h2>
+  <div class="danger">
+    <p>
+      Archives every current member to the history table, then clears
+      <code>did_pay_dues</code>, <code>is_full_member</code>,
+      <code>can_vote</code> and <code>join_date</code> for all users. Payment
+      records are kept. This cannot be undone in bulk — individual members can
+      be restored from their history record.
+    </p>
+    <p>
+      <label for="resetReason">Reason</label><br />
+      <input
+        type="text"
+        id="resetReason"
+        value="Annual membership reset"
+        maxlength="200"
+      />
+    </p>
+    <button id="runReset" class="btn">Run Membership Reset</button>
+    <p id="resetStatus" class="muted"></p>
+  </div>
+</div>
+
+<script src="/static/admin_settings.js"></script>
+{% endblock %}

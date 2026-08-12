@@ -5,6 +5,7 @@ import re
 import uuid
 
 from keycloak import KeycloakAdmin
+from sqlalchemy import update
 from sqlalchemy.orm import selectinload
 from sqlmodel import Session, select
 
@@ -116,7 +117,17 @@ class Approve:
 
     # !TODO finish the post-sign-up stuff + testing
     @staticmethod
-    def approve_member(member_id: uuid.UUID):
+    def approve_member(member_id: uuid.UUID, notify_on_failure: bool = False):
+        """
+        Re-check a member's eligibility and promote them if they qualify.
+
+        Safe to call repeatedly: promotion is claimed with a conditional UPDATE,
+        so only the call that actually flips is_full_member sends the welcome
+        message. notify_on_failure should only be set by callers reacting to a
+        real event (a payment, an admin pressing refresh) — it is off for
+        incidental calls like a profile page view, which would otherwise DM the
+        member every time they look at their own profile.
+        """
         with Session(engine) as session:
             logger.info(f"Re-running approval for {str(member_id)}")
             statement = select(UserModel).where(UserModel.id == member_id).options(selectinload(UserModel.discord), selectinload(UserModel.ethics_form))  # type: ignore[bad-argument-type]
@@ -136,6 +147,25 @@ class Approve:
             # - They paid dues
             # - They signed their ethics form
             if user_data.first_name and user_data.discord_id and user_data.did_pay_dues and user_data.ethics_form.signtime != 0:
+                # Claim the promotion before doing any outbound work. The check
+                # above is a read, so two concurrent calls both reach here; only
+                # the one whose UPDATE actually flips the row may notify. This
+                # also stops both from provisioning against Keycloak.
+                # is_not(True) rather than == False so a NULL row (the column is
+                # nullable) is still claimable instead of silently never promoting.
+                claim_statement = (
+                    update(UserModel)
+                    .where(UserModel.id == member_id, UserModel.is_full_member.is_not(True))  # type: ignore[missing-attribute]
+                    .values(is_full_member=True, renewal=False)
+                    .execution_options(synchronize_session=False)
+                )
+                claim = session.execute(claim_statement)
+                session.commit()
+                if claim.rowcount == 0:  # type: ignore[missing-attribute]
+                    logger.info("	Promoted concurrently by another call; skipping notifications.")
+                    return True
+                session.refresh(user_data)
+
                 logger.info("	Newly-promoted full member!")
 
                 discord_id = user_data.discord_id
@@ -160,18 +190,16 @@ class Approve:
                     Email.send_email("Welcome to Hack@UCF", welcome_msg, user_data.email)
                 except Exception:
                     logger.exception("Failed to send welcome message")
-                # Set member as a "full" member.
-                user_data.is_full_member = True
-                user_data.renewal = False
-                session.add(user_data)
-                session.commit()
-                session.refresh(user_data)
+
+                return True
 
             elif user_data.did_pay_dues:
                 logger.info("	Paid dues but did not do other step!")
-                # Send a message on why this check failed.
-                fail_msg = load_and_render_template("app/messages/membership_approval_failed.md", user_data=user_data, settings=Settings())
-                Discord.send_message(user_data.discord_id, fail_msg)
+                # Only tell them why when something actually happened. This runs
+                # on every profile page load, and used to DM on each one.
+                if notify_on_failure:
+                    fail_msg = load_and_render_template("app/messages/membership_approval_failed.md", user_data=user_data, settings=Settings())
+                    Discord.send_message(user_data.discord_id, fail_msg)
 
             else:
                 logger.info("	Did not pay dues yet.")

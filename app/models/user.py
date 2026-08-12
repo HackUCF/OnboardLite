@@ -7,6 +7,7 @@ from typing import Any, Optional
 
 from email_validator import EmailNotValidError, validate_email
 from pydantic import BaseModel, validator
+from sqlalchemy import Index, text
 from sqlmodel import Field, Relationship, SQLModel
 
 
@@ -62,7 +63,34 @@ class MembershipHistoryModel(SQLModel, table=True):
     user: "UserModel" = Relationship(back_populates="membership_history")
 
 
+class PaymentModel(SQLModel, table=True):
+    """
+    Audit log of dues payments, both Stripe and admin-recorded.
+
+    Rows are history and deliberately survive annual membership resets, so
+    "who paid in which membership year" stays answerable. No Relationship
+    attributes: two foreign keys point at usermodel, which SQLModel cannot
+    disambiguate on its own.
+    """
+
+    id: Optional[int] = Field(default=None, primary_key=True)
+    user_id: uuid.UUID = Field(foreign_key="usermodel.id", index=True)
+    source: str  # "stripe" | "manual"
+    checkout_session_id: Optional[str] = Field(default=None, unique=True)
+    amount_cents: Optional[int] = None
+    currency: Optional[str] = None
+    customer_email: Optional[str] = None  # what Stripe sent, kept for forensics
+    recorded_by_admin_id: Optional[uuid.UUID] = Field(default=None, foreign_key="usermodel.id")
+    note: Optional[str] = None
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc), index=True)
+
+
 class UserModel(SQLModel, table=True):
+    # Partial index: email defaults to "" and most rows are blank, so a plain
+    # unique index would collide. Declared here (not only in the migration) so
+    # SQLModel.metadata.create_all builds it for tests too.
+    __table_args__ = (Index("uq_usermodel_email", "email", unique=True, sqlite_where=text("email IS NOT NULL AND email != ''")),)
+
     id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
     discord_id: str = Field(unique=True)
     ucf_id: Optional[int] = Field(unique=True, default=None)
@@ -158,7 +186,8 @@ class UserModelMutable(BaseModel):
 
     # Permissions and Member Status
     sudo: Optional[bool] = None
-    did_pay_dues: Optional[bool] = None
+    # did_pay_dues is deliberately NOT editable here — it must go through
+    # POST /admin/mark_paid/ so every payment lands in PaymentModel.
 
     # Mentorship Program
     mentor_name: Optional[str] = None

@@ -5,6 +5,7 @@ import logging
 # Create the database
 from alembic import script
 from alembic.runtime import migration
+from sqlalchemy import event
 from sqlmodel import Session, SQLModel, create_engine
 from sqlmodel.pool import StaticPool
 
@@ -19,6 +20,28 @@ engine = create_engine(
     connect_args={"check_same_thread": False},
     poolclass=StaticPool,
 )
+
+# Prod runs multiple uvicorn workers against one SQLite file, so both of these
+# are about surviving concurrent access. Set per connection, since busy_timeout
+# does not persist in the database file the way journal_mode does.
+IS_SQLITE = engine.dialect.name == "sqlite"
+IS_MEMORY_DB = ":memory:" in DATABASE_URL or DATABASE_URL in ("sqlite://", "sqlite:///")
+
+
+@event.listens_for(engine, "connect")
+def set_sqlite_pragmas(dbapi_connection, connection_record):
+    if not IS_SQLITE:
+        return
+    cursor = dbapi_connection.cursor()
+    try:
+        # Wait for a held write lock instead of failing outright.
+        cursor.execute("PRAGMA busy_timeout = 5000")
+        # WAL lets readers carry on during a write. In-memory databases cannot
+        # use it and have no other process to contend with anyway.
+        if not IS_MEMORY_DB:
+            cursor.execute("PRAGMA journal_mode = WAL")
+    finally:
+        cursor.close()
 
 if "sqlite:///:memory:" in DATABASE_URL:
     SQLModel.metadata.create_all(engine)

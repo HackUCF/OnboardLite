@@ -2,19 +2,20 @@
 # Copyright (c) 2024 Collegiate Cyber Defense Club
 import logging
 import uuid
-from datetime import datetime
 
 import stripe
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Request, status
 from fastapi.responses import RedirectResponse
 from fastapi.templating import Jinja2Templates
+from sqlalchemy.exc import IntegrityError, MultipleResultsFound
 from sqlalchemy.orm import selectinload
 from sqlmodel import Session, select
 
-from app.models.user import UserModel, user_to_dict
+from app.models.user import PaymentModel, UserModel, user_to_dict
 from app.util.approve import Approve
 from app.util.auth_dependencies import CurrentMember
 from app.util.database import get_session
+from app.util.membership_reset import MembershipReset
 from app.util.settings import Settings
 
 templates = Jinja2Templates(directory="app/templates")
@@ -47,7 +48,7 @@ async def get_root(
     user_data = user_to_dict(user_data)
 
     paused_payments = Settings().stripe.pause_payments
-    dues_restart_soon = datetime.utcnow().month > 4
+    dues_restart_soon = MembershipReset.dues_restart_soon(session)
 
     return templates.TemplateResponse(
         request,
@@ -137,21 +138,79 @@ async def webhook(request: Request, background_tasks: BackgroundTasks, session: 
     return {"status": "success"}
 
 
-def pay_dues(checkout_session, db_session, background_tasks):
-    customer_email = checkout_session.customer_email
+def resolve_paying_user(checkout_session, db_session):
+    """
+    Work out which user a checkout session belongs to.
 
-    user_data = db_session.exec(select(UserModel).where(UserModel.email == customer_email)).one_or_none()
+    create_checkout_session stamps the user id into session metadata, so prefer
+    that: it is exact and survives the user changing their email afterwards.
+    Fall back to email only for sessions created before that was relied on.
+    """
+    metadata = getattr(checkout_session, "metadata", None) or {}
+    raw_user_id = metadata.get("user_id")
+
+    if raw_user_id:
+        try:
+            member_id = uuid.UUID(str(raw_user_id))
+        except ValueError:
+            logger.warning("Stripe webhook: malformed user_id in metadata: %r", raw_user_id)
+        else:
+            user_data = db_session.get(UserModel, member_id)
+            if user_data is not None:
+                return user_data
+            logger.warning("Stripe webhook: metadata user_id %s not found, falling back to email", member_id)
+
+    customer_email = checkout_session.customer_email
+    if not customer_email:
+        # Blank emails are common (incomplete signups), so an empty lookup here
+        # would match many rows rather than none.
+        return None
+
+    try:
+        return db_session.exec(select(UserModel).where(UserModel.email == customer_email)).one_or_none()
+    except MultipleResultsFound:
+        logger.error("Stripe webhook: multiple users share email %s, refusing to guess", customer_email)
+        return None
+
+
+def pay_dues(checkout_session, db_session, background_tasks):
+    session_id = getattr(checkout_session, "id", None)
+
+    # Stripe redelivers webhooks; the session id is our idempotency key.
+    if session_id is not None:
+        already_recorded = db_session.exec(select(PaymentModel).where(PaymentModel.checkout_session_id == session_id)).first()
+        if already_recorded is not None:
+            logger.info("Stripe webhook: checkout session %s already recorded, skipping", session_id)
+            return
+
+    user_data = resolve_paying_user(checkout_session, db_session)
     if user_data is None:
-        logger.error("Stripe webhook: no user found for email %s", customer_email)
+        logger.error("Stripe webhook: could not resolve a user for checkout session %s", session_id)
         return
 
     member_id = user_data.id
 
+    payment = PaymentModel(
+        user_id=member_id,
+        source="stripe",
+        checkout_session_id=session_id,
+        amount_cents=getattr(checkout_session, "amount_total", None),
+        currency=getattr(checkout_session, "currency", None),
+        customer_email=checkout_session.customer_email,
+    )
+
     # Set PAID.
     user_data.did_pay_dues = True
+    db_session.add(payment)
     db_session.add(user_data)
-    db_session.commit()
+    try:
+        db_session.commit()
+    except IntegrityError:
+        # Another redelivery of the same session committed first.
+        db_session.rollback()
+        logger.info("Stripe webhook: checkout session %s recorded concurrently, skipping", session_id)
+        return
     db_session.refresh(user_data)
 
     # Do checks to approve membership status in background.
-    background_tasks.add_task(Approve.approve_member, member_id)
+    background_tasks.add_task(Approve.approve_member, member_id, notify_on_failure=True)

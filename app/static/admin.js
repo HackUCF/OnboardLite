@@ -229,14 +229,12 @@ function showUser(userId) {
   // Set buttons up
   document.getElementById("payDues").onclick = (evt) => {
     if (window.confirm("Are you sure you want to mark this user as paid?")) {
-      editUser({
-        id: user.id,
-        did_pay_dues: true,
-      });
+      const note = window.prompt(
+        "Optional note (e.g. 'cash at Aug 12 meeting'):",
+        "",
+      );
+      markPaid(user.id, note);
     }
-    setTimeout((evt) => {
-      verifyUser(user.id);
-    }, 2000);
   };
   document.getElementById("payDues").style.display = user.did_pay_dues
     ? "none"
@@ -314,6 +312,54 @@ function editUser(payload) {
     })
     .then((data2) => {
       // Update user data.
+      let member = data2.data;
+
+      member.name = member.first_name + " " + member.surname;
+      member.username = "@" + member.discord.username;
+      member.pfp = member.discord.avatar;
+      member.status = userStatusString(member);
+
+      userDict[user_id] = member;
+      showUser(user_id);
+    });
+}
+
+// Records a payment taken outside Stripe. Goes through its own endpoint rather
+// than editUser so the payment lands in the audit log with the admin's identity.
+function markPaid(user_id, note) {
+  const payload = { user_id: user_id };
+  if (note) {
+    payload.note = note;
+  }
+  fetch("/admin/mark_paid/", {
+    method: "POST",
+    body: JSON.stringify(payload),
+    headers: {
+      "Content-Type": "application/json",
+    },
+    credentials: "include",
+  })
+    .then((response) => {
+      if (!response.ok) {
+        throw new Error("Failed to record payment (" + response.status + ")");
+      }
+      return response.json();
+    })
+    .then(() => {
+      refreshUserDisplay(user_id);
+    })
+    .catch((err) => {
+      alert(err.message);
+    });
+}
+
+// Re-fetch a user and re-render, without re-running the approval workflow.
+function refreshUserDisplay(user_id) {
+  return fetch("/admin/get?member_id=" + user_id)
+    .then((data) => {
+      return data.json();
+    })
+    .then((data2) => {
       let member = data2.data;
 
       member.name = member.first_name + " " + member.surname;
