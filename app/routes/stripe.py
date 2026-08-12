@@ -107,6 +107,9 @@ async def create_checkout_session(
 async def webhook(request: Request, background_tasks: BackgroundTasks, session: Session = Depends(get_session)):
     payload = await request.body()
     sig_header = request.headers.get("stripe-signature")
+    if sig_header is None:
+        logger.error("Stripe webhook missing stripe-signature header")
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Missing signature header")
     event = None
     endpoint_secret = Settings().stripe.webhook_secret.get_secret_value()  # type: ignore[attribute-error]
 
