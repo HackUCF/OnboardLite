@@ -2,9 +2,10 @@
 # Copyright (c) 2024 Collegiate Cyber Defense Club
 import logging
 import uuid
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import List, Optional
 
+from sqlalchemy import func
 from sqlalchemy.orm import selectinload
 from sqlmodel import Session, select
 
@@ -17,6 +18,30 @@ class MembershipReset:
     """
     Utility class for handling membership resets and historical data archiving.
     """
+
+    @staticmethod
+    def get_last_reset_date(session: Session) -> Optional[datetime]:
+        """
+        Date of the most recent membership reset, or None if one has never run.
+
+        Derived from the history table rather than stored separately, so there
+        is only one source of truth for when a reset happened.
+        """
+        return session.exec(select(func.max(MembershipHistoryModel.reset_date))).one_or_none()
+
+    @staticmethod
+    def dues_restart_soon(session: Session, now: Optional[datetime] = None) -> bool:
+        """
+        Whether to warn members that dues are about to reset.
+
+        True from April onwards, until this year's reset has actually run. Once
+        a reset is recorded for the current year the warning stops, and it stays
+        off over January-March.
+        """
+        if now is None:
+            now = datetime.now(timezone.utc)
+        last_reset = MembershipReset.get_last_reset_date(session)
+        return now.month >= 4 and (last_reset is None or last_reset.year < now.year)
 
     @staticmethod
     def reset_all_memberships(
@@ -51,7 +76,7 @@ class MembershipReset:
                         # Create historical record
                         history_record = MembershipHistoryModel(
                             user_id=user.id,
-                            reset_date=datetime.utcnow(),
+                            reset_date=datetime.now(timezone.utc),
                             was_full_member=user.is_full_member,
                             had_paid_dues=user.did_pay_dues,
                             original_join_date=user.join_date,
@@ -93,7 +118,7 @@ class MembershipReset:
                 "reset_count": reset_count,
                 "archived_count": archived_count,
                 "errors": errors,
-                "reset_date": datetime.utcnow().isoformat(),
+                "reset_date": datetime.now(timezone.utc).isoformat(),
                 "admin_user_id": str(admin_user_id) if admin_user_id else None,
                 "reset_reason": reset_reason,
             }

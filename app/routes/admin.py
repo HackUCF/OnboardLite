@@ -13,6 +13,7 @@ from sqlalchemy.orm import selectinload
 from sqlmodel import Session, select
 
 from app.models.user import (
+    PaymentModel,
     UserModel,
     UserModelMutable,
     user_to_dict,
@@ -103,7 +104,8 @@ async def get_refresh(
     if member_id is None:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Missing member_id parameter")
 
-    background_tasks.add_task(Approve.approve_member, member_id)
+    # An admin pressing refresh is a real event, so it may notify on failure.
+    background_tasks.add_task(Approve.approve_member, member_id, notify_on_failure=True)
 
     user_data = session.exec(select(UserModel).where(UserModel.id == member_id)).one_or_none()
 
@@ -220,6 +222,47 @@ async def admin_edit(
     session.add(member_data)
     session.commit()
     return {"data": user_to_dict(member_data), "msg": "Updated successfully!"}
+
+
+@router.post("/mark_paid/")
+async def admin_mark_paid(
+    request: Request,
+    background_tasks: BackgroundTasks,
+    current_admin: CurrentAdmin,
+    user_id: uuid.UUID = Body(..., embed=True),
+    note: Optional[str] = Body(None, embed=True),
+    amount_cents: Optional[int] = Body(None, embed=True),
+    session: Session = Depends(get_session),
+):
+    """
+    Record a payment taken outside Stripe (cash, card in person, comped).
+
+    This exists so manual payments land in the same audit log as Stripe ones;
+    did_pay_dues is deliberately not editable through the generic user editor.
+    """
+    member_data = session.exec(select(UserModel).where(UserModel.id == user_id)).one_or_none()
+    if not member_data:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
+
+    payment = PaymentModel(
+        user_id=user_id,
+        source="manual",
+        amount_cents=amount_cents,
+        customer_email=member_data.email,
+        recorded_by_admin_id=uuid.UUID(current_admin["id"]),
+        note=note,
+    )
+    member_data.did_pay_dues = True
+    session.add(payment)
+    session.add(member_data)
+    session.commit()
+    session.refresh(member_data)
+
+    logger.info("Admin %s recorded a manual payment for user %s", current_admin["id"], user_id)
+
+    background_tasks.add_task(Approve.approve_member, user_id, notify_on_failure=True)
+
+    return {"data": user_to_dict(member_data), "msg": "Payment recorded."}
 
 
 @router.get("/list")
@@ -376,6 +419,64 @@ async def get_reset_summary(
     summary = MembershipReset.get_reset_summary(session=session)
 
     return {"data": summary}
+
+
+@router.get("/settings/")
+async def admin_settings(
+    request: Request,
+    current_admin: CurrentAdmin,
+    session: Session = Depends(get_session),
+):
+    """
+    Renders the site-wide admin controls, as opposed to the per-user roster.
+    """
+    return templates.TemplateResponse(
+        request,
+        "admin_settings.html",
+        {
+            "icon": current_admin["pfp"],
+            "name": current_admin["name"],
+            "id": current_admin["id"],
+            "summary": MembershipReset.get_reset_summary(session),
+            "last_reset": MembershipReset.get_last_reset_date(session),
+            "dues_restart_soon": MembershipReset.dues_restart_soon(session),
+        },
+    )
+
+
+@router.get("/payments/")
+async def list_payments(
+    request: Request,
+    current_admin: CurrentAdmin,
+    limit: int = 50,
+    session: Session = Depends(get_session),
+):
+    """
+    Recent dues payments, Stripe and manual alike, newest first.
+    """
+    statement = select(PaymentModel).order_by(PaymentModel.created_at.desc()).limit(limit)  # type: ignore[bad-argument-type]
+    payments = session.exec(statement).all()
+
+    data = []
+    for payment in payments:
+        member = session.get(UserModel, payment.user_id)
+        data.append(
+            {
+                "id": payment.id,
+                "user_id": str(payment.user_id),
+                "member_name": f"{member.first_name} {member.surname}".strip() if member else "",
+                "source": payment.source,
+                "checkout_session_id": payment.checkout_session_id,
+                "amount_cents": payment.amount_cents,
+                "currency": payment.currency,
+                "customer_email": payment.customer_email,
+                "recorded_by_admin_id": str(payment.recorded_by_admin_id) if payment.recorded_by_admin_id else None,
+                "note": payment.note,
+                "created_at": payment.created_at.isoformat(),
+            }
+        )
+
+    return {"data": data}
 
 
 @router.post("/restore_membership/")
