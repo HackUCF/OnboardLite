@@ -21,9 +21,14 @@ class CSRFMiddleware(BaseHTTPMiddleware):
             if path.startswith(bypass):
                 return await call_next(request)
 
-        method = request.method
+        # 1. Exempt safe methods
+        # Go behavior: GET/HEAD/OPTIONS short-circuit before any Fetch metadata is read.
+        # These cannot change state, so cross-site subresource loads (favicons, /static
+        # assets fetched from browser chrome or after a cross-site redirect) are fine.
+        if request.method in ["GET", "HEAD", "OPTIONS"]:
+            return await call_next(request)
 
-        # 1. Check Sec-Fetch-Site (Modern Browsers)
+        # 2. Check Sec-Fetch-Site (Modern Browsers)
         # Strict enforcement: Only allow same-origin and none.
         if "sec-fetch-site" in request.headers:
             sec_fetch_site = request.headers.get("sec-fetch-site")
@@ -33,9 +38,8 @@ class CSRFMiddleware(BaseHTTPMiddleware):
             if sec_fetch_site in ["same-origin", "none"]:
                 return await call_next(request)
 
-            # Allow "navigate" mode (Top Level Navigation) for cross-site requests
-            if sec_fetch_mode == "navigate" and method in ["GET", "HEAD"]:
-                return await call_next(request)
+            # NOTE: cross-site "navigate" requests are only reachable here with an unsafe
+            # method (a cross-site form POST), which is the classic CSRF attack. Block it.
 
             # Check Trusted Origins (Whitelist) for cross-site/same-site requests
             origin = request.headers.get("origin")
@@ -45,7 +49,7 @@ class CSRFMiddleware(BaseHTTPMiddleware):
             # Block everything else
             return await self._handle_violation(request, f"Blocked by Sec-Fetch-Site. Mode: {sec_fetch_mode}, Site: {sec_fetch_site}")
 
-        # 2. Fallback: Check Origin Header (Older Browsers / iOS 13)
+        # 3. Fallback: Check Origin Header (Older Browsers / iOS 13)
         origin = request.headers.get("origin")
         if origin:
             # Check Whitelist First
@@ -64,7 +68,7 @@ class CSRFMiddleware(BaseHTTPMiddleware):
 
             return await self._handle_violation(request, f"Origin Mismatch. Origin: {origin}, Host: {request.headers.get('host')}")
 
-        # 3. Neither header present -> Allow (Assume same-origin or non-browser)
+        # 4. Neither header present -> Allow (Assume same-origin or non-browser)
         return await call_next(request)
 
     def _is_trusted_origin(self, origin: str) -> bool:
