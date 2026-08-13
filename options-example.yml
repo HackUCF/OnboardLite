@@ -28,7 +28,9 @@ stripe:
   api_key: "your_stripe_api_key_here"
   webhook_secret: "your_stripe_webhook_secret_here"
   price_id: "your_stripe_price_id_here"
-  url_success: "https://join.hackucf.org/final/"
+  # Only the scheme and host are used; the path is pinned to /pay/final,
+  # the route that records the payment on return from Stripe.
+  url_success: "https://join.hackucf.org/pay/final"
   url_failure: "https://join.hackucf.org/pay/"
   pause_payments: true
 

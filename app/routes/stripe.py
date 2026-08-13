@@ -2,6 +2,8 @@
 # Copyright (c) 2024 Collegiate Cyber Defense Club
 import logging
 import uuid
+from typing import Optional
+from urllib.parse import urlencode, urlparse, urlunparse
 
 import stripe
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Request, status
@@ -62,6 +64,30 @@ async def get_root(
     )
 
 
+PAY_FINAL_PATH = "/pay/final"
+
+
+def build_success_url(url_success: str) -> str:
+    """
+    Where Stripe sends the member after a successful checkout.
+
+    Only the scheme and host are taken from config; the path is pinned to the
+    route that actually reconciles the payment. Leaving the path configurable
+    means a stale config silently lands members on a page that ignores the
+    session id — the checkout still looks fine and nothing is ever recorded.
+    That failure is invisible, so it isn't worth the flexibility.
+
+    ``{CHECKOUT_SESSION_ID}`` is Stripe's template token; it substitutes the
+    real session id on redirect.
+    """
+    parts = urlparse(url_success)
+    if parts.path.rstrip("/") not in ("", PAY_FINAL_PATH):
+        logger.info("Overriding configured stripe.url_success path %r with %s", parts.path, PAY_FINAL_PATH)
+    # safe="{}" keeps the braces literal; Stripe matches on them verbatim.
+    query = urlencode({"session_id": "{CHECKOUT_SESSION_ID}"}, safe="{}")
+    return urlunparse(parts._replace(path=PAY_FINAL_PATH, query=query, params="", fragment=""))
+
+
 @router.post("/checkout")
 async def create_checkout_session(
     request: Request,
@@ -90,7 +116,7 @@ async def create_checkout_session(
             ],
             customer_email=stripe_email,
             mode="payment",
-            success_url=Settings().stripe.url_success,  # type: ignore[bad-argument-type]
+            success_url=build_success_url(Settings().stripe.url_success),  # type: ignore[bad-argument-type]
             cancel_url=Settings().stripe.url_failure,  # type: ignore[bad-argument-type]
             metadata={"user_id": str(user_id)},
         )
@@ -221,3 +247,64 @@ def pay_dues(checkout_session, db_session, background_tasks):
 
     # Do checks to approve membership status in background.
     background_tasks.add_task(Approve.approve_member, member_id, notify_on_failure=True)
+
+
+@router.get("/final")
+async def pay_final(
+    request: Request,
+    current_user: CurrentMember,
+    background_tasks: BackgroundTasks,
+    session_id: Optional[str] = None,
+    session: Session = Depends(get_session),
+):
+    """
+    Where Stripe returns the member after a successful checkout.
+
+    The webhook stays the source of truth, but it can be delayed or fail
+    outright. When that happens the member gets no confirmation, sees the Pay
+    button again on their next visit, and pays twice — which has happened.
+    Recording the payment here too closes that window.
+
+    pay_dues dedups on checkout_session_id, so this and the webhook race
+    harmlessly: whichever arrives first wins and the other is a no-op.
+    """
+    # Deliberately not gated on pause_payments: pausing stops new sessions
+    # being created, but a member returning from one created beforehand still
+    # needs crediting. An unset API key surfaces as a StripeError below.
+    if session_id:
+        try:
+            checkout_session = stripe.checkout.Session.retrieve(session_id)
+        except stripe.StripeError:
+            # Never block the confirmation page on Stripe being reachable; the
+            # webhook is still coming.
+            logger.exception("Could not retrieve checkout session %s on return", session_id)
+        else:
+            if session_belongs_to(checkout_session, current_user):
+                if getattr(checkout_session, "payment_status", None) == "paid":
+                    pay_dues(checkout_session, session, background_tasks)
+            else:
+                logger.warning(
+                    "User %s returned with checkout session %s belonging to someone else",
+                    current_user.get("id"),
+                    session_id,
+                )
+
+    return templates.TemplateResponse(request, "done.html")
+
+
+def session_belongs_to(checkout_session, current_user) -> bool:
+    """
+    Whether this checkout session was created for the logged-in member.
+
+    Session ids arrive in a query string the member controls, so confirm
+    ownership before crediting anyone. Compare parsed UUIDs rather than raw
+    strings so formatting differences can't cause a false mismatch.
+    """
+    metadata = getattr(checkout_session, "metadata", None)
+    raw_user_id = getattr(metadata, "user_id", None)
+    if not raw_user_id:
+        return False
+    try:
+        return uuid.UUID(str(raw_user_id)) == uuid.UUID(str(current_user.get("id")))
+    except (ValueError, TypeError):
+        return False

@@ -5,14 +5,16 @@ from datetime import datetime, timezone
 from unittest.mock import patch
 
 import pytest
+import stripe
 from fastapi import BackgroundTasks
 from fastapi.testclient import TestClient
 from sqlalchemy import update
 from sqlmodel import Session, select
 
 from app.models.user import EthicsFormModel, MembershipHistoryModel, PaymentModel, UserModel
-from app.routes.stripe import pay_dues
+from app.routes.stripe import build_success_url, pay_dues
 from app.util.approve import Approve
+from app.util.auth_dependencies import Authentication
 from app.util.membership_reset import MembershipReset
 
 
@@ -337,3 +339,118 @@ def test_last_reset_date_derives_from_history(session: Session):
     session.commit()
 
     assert MembershipReset.get_last_reset_date(session).year == 2026
+
+
+# --- /pay/final: reconciling on return from Stripe -------------------------------
+
+
+def test_build_success_url_adds_placeholder():
+    """Stripe's template token must survive URL encoding verbatim."""
+    assert build_success_url("https://join.hackucf.org/pay/final") == "https://join.hackucf.org/pay/final?session_id={CHECKOUT_SESSION_ID}"
+
+
+def test_build_success_url_pins_stale_configured_path():
+    """
+    Regression: a config still pointing at /final/ sent members to a page that
+    ignores session_id, so the payment was never recorded and checkout looked
+    successful. Only the origin is taken from config.
+    """
+    assert build_success_url("https://join.hackucf.org/final/") == "https://join.hackucf.org/pay/final?session_id={CHECKOUT_SESSION_ID}"
+
+
+def test_build_success_url_keeps_scheme_and_host():
+    assert build_success_url("http://localhost:8000/final/") == "http://localhost:8000/pay/final?session_id={CHECKOUT_SESSION_ID}"
+
+
+def test_build_success_url_drops_stale_query():
+    result = build_success_url("https://join.hackucf.org/final/?ref=email")
+    assert result == "https://join.hackucf.org/pay/final?session_id={CHECKOUT_SESSION_ID}"
+
+
+def test_pay_final_records_payment_when_webhook_never_fires(session: Session, client: TestClient, checkout_session_factory):
+    """The outage case: member returns from Stripe, webhook never arrives."""
+    payer = make_user(session)
+    jwt = Authentication.create_jwt(payer)
+    checkout = checkout_session_factory(id="cs_return_1", metadata={"user_id": str(payer.id)}, amount_total=1062)
+
+    # approve_member opens its own Session(engine) against the real database;
+    # TestClient runs background tasks inline, so it has to be stubbed here.
+    with (
+        patch("app.routes.stripe.stripe.checkout.Session.retrieve", return_value=checkout),
+        patch("app.routes.stripe.Approve.approve_member") as approve,
+    ):
+        response = client.get("/pay/final?session_id=cs_return_1", cookies={"token": jwt})
+
+    approve.assert_called_once()
+
+    assert response.status_code == 200
+    payments = session.exec(select(PaymentModel).where(PaymentModel.checkout_session_id == "cs_return_1")).all()
+    assert len(payments) == 1
+    assert payments[0].amount_cents == 1062
+    session.refresh(payer)
+    assert payer.did_pay_dues is True
+
+
+def test_pay_final_and_webhook_produce_one_payment(session: Session, client: TestClient, checkout_session_factory):
+    """Both paths processing the same session must not double-credit."""
+    payer = make_user(session)
+    jwt = Authentication.create_jwt(payer)
+    checkout = checkout_session_factory(id="cs_race_1", metadata={"user_id": str(payer.id)})
+
+    pay_dues(checkout, session, BackgroundTasks())
+    with patch("app.routes.stripe.stripe.checkout.Session.retrieve", return_value=checkout):
+        response = client.get("/pay/final?session_id=cs_race_1", cookies={"token": jwt})
+
+    assert response.status_code == 200
+    payments = session.exec(select(PaymentModel).where(PaymentModel.checkout_session_id == "cs_race_1")).all()
+    assert len(payments) == 1
+
+
+def test_pay_final_refuses_someone_elses_session(session: Session, client: TestClient, checkout_session_factory):
+    """Session ids come from a member-controlled query string."""
+    payer = make_user(session, email="payer@example.com")
+    attacker = make_user(session, email="attacker@example.com", discord_id="88888888888888888")
+    jwt = Authentication.create_jwt(attacker)
+    checkout = checkout_session_factory(id="cs_theft_1", metadata={"user_id": str(payer.id)})
+
+    with patch("app.routes.stripe.stripe.checkout.Session.retrieve", return_value=checkout):
+        response = client.get("/pay/final?session_id=cs_theft_1", cookies={"token": jwt})
+
+    assert response.status_code == 200
+    assert session.exec(select(PaymentModel)).all() == []
+    session.refresh(attacker)
+    session.refresh(payer)
+    assert attacker.did_pay_dues is False
+    assert payer.did_pay_dues is False
+
+
+def test_pay_final_ignores_unpaid_session(session: Session, client: TestClient, checkout_session_factory):
+    payer = make_user(session)
+    jwt = Authentication.create_jwt(payer)
+    checkout = checkout_session_factory(id="cs_unpaid_1", metadata={"user_id": str(payer.id)}, payment_status="unpaid")
+
+    with patch("app.routes.stripe.stripe.checkout.Session.retrieve", return_value=checkout):
+        response = client.get("/pay/final?session_id=cs_unpaid_1", cookies={"token": jwt})
+
+    assert response.status_code == 200
+    assert session.exec(select(PaymentModel)).all() == []
+
+
+def test_pay_final_renders_without_session_id(session: Session, client: TestClient):
+    """The join flow lands here too, with no session_id."""
+    payer = make_user(session)
+    jwt = Authentication.create_jwt(payer)
+    response = client.get("/pay/final", cookies={"token": jwt})
+    assert response.status_code == 200
+
+
+def test_pay_final_survives_stripe_being_down(session: Session, client: TestClient):
+    """A Stripe outage must not break the confirmation page."""
+    payer = make_user(session)
+    jwt = Authentication.create_jwt(payer)
+
+    with patch("app.routes.stripe.stripe.checkout.Session.retrieve", side_effect=stripe.APIConnectionError("down")):
+        response = client.get("/pay/final?session_id=cs_down_1", cookies={"token": jwt})
+
+    assert response.status_code == 200
+    assert session.exec(select(PaymentModel)).all() == []
