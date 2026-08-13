@@ -129,7 +129,7 @@ async def webhook(request: Request, background_tasks: BackgroundTasks, session: 
         # Retrieve the session. If you require line items in the response, you may include them by expanding line_items.
         checkout_session = event["data"]["object"]
 
-        if checkout_session.payment_status == "paid":
+        if getattr(checkout_session, "payment_status", None) == "paid":
             # Mark as paid.
             pay_dues(checkout_session, session, background_tasks)
 
@@ -148,9 +148,13 @@ def resolve_paying_user(checkout_session, db_session):
     create_checkout_session stamps the user id into session metadata, so prefer
     that: it is exact and survives the user changing their email afterwards.
     Fall back to email only for sessions created before that was relied on.
+
+    Read every field with getattr: Stripe hands us a StripeObject, which is not
+    a dict (no ``.get()``), and missing fields raise AttributeError rather than
+    returning None.
     """
-    metadata = getattr(checkout_session, "metadata", None) or {}
-    raw_user_id = metadata.get("user_id")
+    metadata = getattr(checkout_session, "metadata", None)
+    raw_user_id = getattr(metadata, "user_id", None)
 
     if raw_user_id:
         try:
@@ -163,7 +167,7 @@ def resolve_paying_user(checkout_session, db_session):
                 return user_data
             logger.warning("Stripe webhook: metadata user_id %s not found, falling back to email", member_id)
 
-    customer_email = checkout_session.customer_email
+    customer_email = getattr(checkout_session, "customer_email", None)
     if not customer_email:
         # Blank emails are common (incomplete signups), so an empty lookup here
         # would match many rows rather than none.
@@ -199,7 +203,7 @@ def pay_dues(checkout_session, db_session, background_tasks):
         checkout_session_id=session_id,
         amount_cents=getattr(checkout_session, "amount_total", None),
         currency=getattr(checkout_session, "currency", None),
-        customer_email=checkout_session.customer_email,
+        customer_email=getattr(checkout_session, "customer_email", None),
     )
 
     # Set PAID.

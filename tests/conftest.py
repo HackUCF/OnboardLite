@@ -3,6 +3,7 @@
 import uuid
 
 import pytest
+import stripe
 from fastapi.testclient import TestClient
 from sqlmodel import Session, SQLModel, create_engine
 from sqlmodel.pool import StaticPool
@@ -127,22 +128,28 @@ def admin_jwt_fixture(admin_user: UserModel):
     return Authentication.create_jwt(admin_user)
 
 
-class FakeCheckoutSession:
+def make_checkout_session(id="cs_test_123", customer_email=None, metadata=None, amount_total=1000, currency="usd", payment_status="paid"):
     """
-    Stand-in for stripe.checkout.Session. The real object is attribute-accessed
-    (``.customer_email``, ``.metadata``), so a plain namespace is enough and
-    avoids pulling in a Stripe mocking dependency the project doesn't have.
-    """
+    Build a real ``stripe.checkout.Session`` from a raw payload, exactly as
+    ``stripe.Webhook.construct_event`` does in the webhook route.
 
-    def __init__(self, id="cs_test_123", customer_email=None, metadata=None, amount_total=1000, currency="usd", payment_status="paid"):
-        self.id = id
-        self.customer_email = customer_email
-        self.metadata = metadata if metadata is not None else {}
-        self.amount_total = amount_total
-        self.currency = currency
-        self.payment_status = payment_status
+    Deliberately not a hand-rolled namespace. ``StripeObject`` is not a dict —
+    it has no ``.get()`` — and because it defines ``__getattr__`` no type
+    checker will flag the difference. A dict-based stand-in therefore accepts
+    calls that raise ``AttributeError`` against the real object in production.
+    """
+    payload = {
+        "id": id,
+        "object": "checkout.session",
+        "customer_email": customer_email,
+        "metadata": metadata if metadata is not None else {},
+        "amount_total": amount_total,
+        "currency": currency,
+        "payment_status": payment_status,
+    }
+    return stripe.checkout.Session.construct_from(payload, None)
 
 
 @pytest.fixture(name="checkout_session_factory")
 def checkout_session_factory_fixture():
-    return FakeCheckoutSession
+    return make_checkout_session
