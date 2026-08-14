@@ -159,6 +159,7 @@ class Approve:
                     .values(is_full_member=True, renewal=False)
                     .execution_options(synchronize_session=False)
                 )
+                was_renewal = bool(user_data.renewal)
                 claim = session.execute(claim_statement)
                 session.commit()
                 if claim.rowcount == 0:  # type: ignore[missing-attribute]
@@ -183,11 +184,13 @@ class Approve:
                 except Exception:
                     logger.exception("Failed to assign role")
 
+                template = "renewal.md" if was_renewal else "welcome.md"
+                subject = "Welcome back to Hack@UCF" if was_renewal else "Welcome to Hack@UCF"
                 # Send Discord message saying they are a member
-                welcome_msg = load_and_render_template("app/messages/welcome.md", user_data=user_data, creds=creds, settings=Settings())
+                msg = load_and_render_template(f"app/messages/{template}", user_data=user_data, creds=creds, settings=Settings())
                 try:
-                    Discord.send_message(discord_id, welcome_msg)
-                    Email.send_email("Welcome to Hack@UCF", welcome_msg, user_data.email)
+                    Discord.send_message(discord_id, msg)
+                    Email.send_email(subject, msg, user_data.email)
                 except Exception:
                     logger.exception("Failed to send welcome message")
 

@@ -1,12 +1,13 @@
 import logging
 from pathlib import Path
+from typing import Any
 
 from jinja2 import Environment, FileSystemLoader
 
 logger = logging.getLogger()
 
 
-def load_and_render_template(template_path, **context):
+def load_and_render_template(template_path: str | Path, **context: Any) -> str:
     """
     Load a Jinja template from disk and render it with the provided context.
 
