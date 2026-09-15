@@ -49,6 +49,13 @@ from app.util.settings import Settings
 # os.environ["OAUTHLIB_INSECURE_TRANSPORT"] = "0"
 ###
 
+# Discord sometimes grants a superset of the requested OAuth scopes (e.g. it has
+# started including "applications.commands" alongside "identify email guilds.join"
+# now that the bot registers slash commands). oauthlib treats any scope mismatch
+# as fatal by default, so relax that check rather than 500ing on a harmless extra
+# scope. https://github.com/requests/requests-oauthlib/issues/380
+os.environ["OAUTHLIB_RELAX_TOKEN_SCOPE"] = "1"
+
 if Settings().loglevel:
     logging.basicConfig(
         level=getattr(logging, Settings().loglevel.upper()),
