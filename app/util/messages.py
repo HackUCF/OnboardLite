@@ -23,7 +23,7 @@ def load_and_render_template(template_path: str | Path, **context: Any) -> str:
     template_name = Path(template_path).name
 
     # Create Jinja environment
-    env = Environment(loader=FileSystemLoader(template_dir))
+    env = Environment(loader=FileSystemLoader(template_dir), autoescape=True)
     template = env.get_template(template_name)
 
     # Render the template

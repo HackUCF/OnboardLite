@@ -1,4 +1,4 @@
-Hello {{user_data.first_name}}, and welcome back to Hack@UCF!
+Hello {{user_data.first_name|e}}, and welcome back to Hack@UCF!
 
 This message confirms that your membership renewal has processed successfully. You can view and edit your membership ID at <https://{{settings.http.domain}}/profile>.
 

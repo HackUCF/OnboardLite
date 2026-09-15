@@ -1,4 +1,4 @@
-Hello {{user_data.first_name}}, and welcome to Hack@UCF!
+Hello {{user_data.first_name|e}}, and welcome to Hack@UCF!
 
 This message confirms that your membership has processed successfully. You can view and edit your membership ID at <https://{{settings.http.domain}}/profile>.
 
