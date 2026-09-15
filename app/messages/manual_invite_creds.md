@@ -1,4 +1,4 @@
-Hello {{user_data.first_name}},
+Hello {{user_data.first_name|e}},
 
 We're happy to grant you access to the Hack@UCF Private Cloud! You can reach it at <{{settings.infra.horizon}}> using these credentials:
 

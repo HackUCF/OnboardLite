@@ -1,4 +1,4 @@
-Hello {{user_data.first_name or "there"}},
+Hello {{(user_data.first_name or "there")|e}},
 
 You're almost a Hack@UCF member! Not everything is checked off yet:
 
