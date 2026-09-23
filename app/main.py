@@ -525,7 +525,9 @@ async def forms(
     if user_data is None:
         return Errors.generate(request, 404, "Account not found", essay="Your session points at an account that no longer exists. Please log out and log in again.")
     # Have Kennelish parse the data.
-    user_data = prefill_quiz_answers(num, user_to_dict(user_data))
+    user_data = user_to_dict(user_data)
+    if isinstance(user_data, dict):
+        prefill_quiz_answers(num, user_data)
     body = Kennelish.parse(data, user_data)
 
     # return num
