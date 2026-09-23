@@ -23,7 +23,7 @@
           "Send the reporter the emails they asked for",
           "Route it through whoever's handling PR and don't share member info myself — being an exec is not a personal press office license.",
           "Ignore the DM and hope they forget about it.",
-          "Ask for members consent before sending their emails"
+          "Ask for members' consent before sending their emails"
         ],
         "key": "admin_compliance_reporter_ack"
       },
