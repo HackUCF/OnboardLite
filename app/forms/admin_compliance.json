@@ -21,9 +21,9 @@
         "required": true,
         "options": [
           "Send the reporter the emails they asked for",
-          "Route it through whoever's handling PR and don't share member info myself — being an exec is not a personal press office license.",
+          "Forward the request to whoever handles PR and have them send the emails over",
           "Ignore the DM and hope they forget about it.",
-          "Ask for members' consent before sending their emails"
+          "Ask the Plinko winners if they're OK being contacted, and only pass along the emails of those who say yes"
         ],
         "key": "admin_compliance_reporter_ack"
       },
