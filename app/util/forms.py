@@ -42,7 +42,7 @@ class Forms:
 # Each answer must match one of the radio's options exactly.
 FORM_CORRECT_ANSWERS: dict[str, dict[str, str]] = {
     "admin_compliance": {
-        "admin_compliance_reporter_ack": "Ask for members' consent before sending their emails",
+        "admin_compliance_reporter_ack": "Ask the Plinko winners if they're OK being contacted, and only pass along the emails of those who say yes",
         "admin_compliance_government_ack": "Politely decline to answer, get their contact info, and immediately loop in the rest of the exec board",
         "admin_compliance_first_amendment_ack": "Forcing disclosure violated members' First Amendment right to freedom of association.",
         "admin_compliance_sponsor_ack": "Offer to build a resume pool of members who've opted in, or offer to forward the job listing to our members",
