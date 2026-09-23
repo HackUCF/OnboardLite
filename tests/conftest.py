@@ -116,6 +116,7 @@ def admin_user_fixture(session: Session):
         sudo=True,
         did_pay_dues=True,
         is_full_member=True,
+        admin_compliance_signtime=1,
         discord=admin_discord,
     )
     session.add(admin)

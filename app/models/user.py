@@ -123,6 +123,12 @@ class UserModel(SQLModel, table=True):
     attending: Optional[str] = ""
     comments: Optional[str] = ""
     non_ucf_terms_agreement: Optional[bool] = False
+    admin_compliance_reporter_ack: Optional[bool] = False
+    admin_compliance_government_ack: Optional[bool] = False
+    admin_compliance_first_amendment_ack: Optional[bool] = False
+    admin_compliance_sponsor_ack: Optional[bool] = False
+    admin_compliance_peer_ack: Optional[bool] = False
+    admin_compliance_signtime: Optional[int] = 0
 
     discord: DiscordModel = Relationship(back_populates="user")
     ethics_form: EthicsFormModel = Relationship(back_populates="user")

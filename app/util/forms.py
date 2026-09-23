@@ -35,6 +35,59 @@ class Forms:
             raise FileNotFoundError
 
 
+# Correct answers for multiple-choice / quiz-style forms, keyed by form num
+# then by field key. Deliberately kept out of app/forms/*.json: GET /api/form/{num}
+# returns that file verbatim to anyone unauthenticated (form files aren't
+# considered sensitive), so embedding answers there would hand out the quiz key.
+# Each answer must match one of the radio's options exactly.
+FORM_CORRECT_ANSWERS: dict[str, dict[str, str]] = {
+    "admin_compliance": {
+        "admin_compliance_reporter_ack": "Route it through whoever's handling PR and don't share member info myself — being an exec is not a personal press office license.",
+        "admin_compliance_government_ack": "Politely decline to answer, get their contact info, and immediately loop in the rest of the exec board",
+        "admin_compliance_first_amendment_ack": "Forcing disclosure violated members' First Amendment right to freedom of association.",
+        "admin_compliance_sponsor_ack": "Offer to build a resume pool of members who've opted in, or offer to forward the job listing to our members",
+        "admin_compliance_peer_ack": "Share only what's actually needed for a purpose tied to the requester's own role; for anyone else (including officers asking outside their lane), redirect them to the member directly or loop in the board.",
+    }
+}
+
+
+def iter_form_elements(kennelish_data):
+    """Yield every element in a Kennelish form, descending into h1/h2 sections."""
+    for el in kennelish_data or []:
+        yield el
+        if el.get("elements"):
+            yield from iter_form_elements(el.get("elements"))
+
+
+def wrong_quiz_answers(num: str, kennelish_data, submitted: dict) -> list[str]:
+    """
+    Return the headings of the quiz questions in form `num` that `submitted`
+    got wrong (empty if all correct or the form isn't graded). A question's
+    heading is the nearest h3 above its radio, falling back to its key.
+    """
+    answers = FORM_CORRECT_ANSWERS.get(num, {})
+    wrong = []
+    heading = None
+    for el in iter_form_elements(kennelish_data):
+        if el.get("input") == "h3":
+            heading = el.get("label")
+        key = el.get("key")
+        if key in answers and submitted.get(key) != answers[key]:
+            wrong.append(heading or key)
+    return wrong
+
+
+def prefill_quiz_answers(num: str, user_data: dict) -> dict:
+    """
+    Graded answers are stored as True once passed; map them back to the
+    correct option text so the form re-renders with them selected.
+    """
+    for key, correct_value in FORM_CORRECT_ANSWERS.get(num, {}).items():
+        if user_data.get(key) is True:
+            user_data[key] = correct_value
+    return user_data
+
+
 def fuzzy_parse_value(value):
     # Convert common boolean-like values
     if isinstance(value, str):

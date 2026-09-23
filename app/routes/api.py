@@ -2,6 +2,7 @@
 # Copyright (c) 2024 Collegiate Cyber Defense Club
 import json
 import logging
+import time
 import uuid
 
 from fastapi import APIRouter, Depends, HTTPException, Request, status
@@ -13,7 +14,7 @@ from app.models.info import InfoModel
 from app.models.user import PublicContact, UserModel, user_update_instance
 from app.util.auth_dependencies import CurrentMember
 from app.util.database import get_session
-from app.util.forms import Forms, apply_fuzzy_parsing, transform_dict
+from app.util.forms import FORM_CORRECT_ANSWERS, Forms, apply_fuzzy_parsing, iter_form_elements, transform_dict, wrong_quiz_answers
 from app.util.kennelish import Transformer
 
 logger = logging.getLogger(__name__)
@@ -177,6 +178,23 @@ async def post_form(
         return {"description": "Malformed JSON input."}
 
     model_validated = model(**inp).model_dump()
+
+    # Grade quiz-style radios, if this form has any. Wrong answers bounce
+    # the submission back instead of getting silently recorded.
+    if num in FORM_CORRECT_ANSWERS:
+        wrong = wrong_quiz_answers(num, kennelish_data, model_validated)
+        if wrong:
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                detail="Not quite — re-read the scenario and pick the answer that's actually right for: " + "; ".join(wrong),
+            )
+        for key in FORM_CORRECT_ANSWERS[num]:
+            model_validated[key] = True
+        # Passing is what gets recorded, so stamp the signature server-side
+        # rather than trusting (or depending on) a client-supplied time.
+        for el in iter_form_elements(kennelish_data):
+            if el.get("input") == "signature" and el.get("key"):
+                model_validated[el["key"]] = int(time.time())
 
     validated_data = apply_fuzzy_parsing(model_validated)
 
