@@ -32,7 +32,44 @@ logger = logging.getLogger(__name__)
 
 templates = Jinja2Templates(directory="app/templates")
 
-router = APIRouter(prefix="/admin", tags=["Admin"], redirect_slashes=False)
+COMPLIANCE_TRAINING_URL = "/join/admin_compliance/"
+
+
+def _admin_needs_compliance_training(current_admin: dict, session: Session) -> bool:
+    """
+    True if this admin must complete the data-handling compliance training
+    before using any part of the admin panel or its APIs.
+
+    API-key callers are trusted server-to-server automation, not a human
+    clicking through the panel, and have no UserModel row to check against,
+    so they're exempt.
+    """
+    if current_admin.get("api_key"):
+        return False
+
+    try:
+        admin_id = uuid.UUID(str(current_admin.get("id")))
+    except (ValueError, TypeError):
+        return True
+
+    admin_user = session.get(UserModel, admin_id)
+    return not admin_user or not admin_user.admin_compliance_signtime
+
+
+def require_compliance_training(request: Request, current_admin: CurrentAdmin, session: Session = Depends(get_session)) -> None:
+    """
+    Router-wide gate: every /admin endpoint exposes member data or acts on it,
+    so none of them are usable until the admin has passed the training. The
+    panel's home page redirects to the training; everything else gets a 403.
+    """
+    if not _admin_needs_compliance_training(current_admin, session):
+        return
+    if request.url.path.rstrip("/") == "/admin":
+        raise HTTPException(status_code=status.HTTP_302_FOUND, headers={"Location": COMPLIANCE_TRAINING_URL})
+    raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Complete the admin compliance training before using the admin panel.")
+
+
+router = APIRouter(prefix="/admin", tags=["Admin"], redirect_slashes=False, dependencies=[Depends(require_compliance_training)])
 
 
 @router.get("/")

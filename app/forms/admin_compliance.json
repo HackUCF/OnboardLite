@@ -1,0 +1,127 @@
+[
+  {
+    "label": "Congratulations, You Have Access To Everyone's Data",
+    "input": "h1",
+    "elements": [
+      {
+        "label": "You now have admin access to Onboard, which means you can see and export every member's name, email, NID, and other PII in a couple of clicks. This access has historically gone almost exclusively to execs, which also means execs are exactly who caused the first two incidents below. Funny how that works. (To be clear: Scenarios 1 and 2 actually happened. The rest are genuinely hypothetical, and we'd like to keep it that way.) So: before you get to use the panel, the CSV export, or the JSON export, you're doing a quick training. There is a right answer to each question below. Pick the wrong one and it'll bounce you back to try again.",
+        "input": "p"
+      },
+      {
+        "label": "'Hypothetical' Scenario 1: A reporter slides into your DMs",
+        "input": "h3"
+      },
+      {
+        "label": "A journalist covering Horse Plinko messages you asking for \"just a few members' emails, just the Plinko winners.\" They seem nice. They probably are nice.",
+        "input": "p"
+      },
+      {
+        "caption": "What do you do?",
+        "input": "radio",
+        "required": true,
+        "options": [
+          "Send the reporter the emails they asked for",
+          "Route it through whoever's handling PR and don't share member info myself — being an exec is not a personal press office license.",
+          "Ignore the DM and hope they forget about it.",
+          "Ask for members consent before sending their emails"
+        ],
+        "key": "admin_compliance_reporter_ack"
+      },
+      {
+        "label": "'Hypothetical' Scenario 2: Someone with a badge wants the whole list",
+        "input": "h3"
+      },
+      {
+        "label": "A UCF PD officer walks up and asks you to hand over the complete membership list, right now, because they said so. No subpoena, just a pretty face and a police badge.",
+        "input": "p"
+      },
+      {
+        "label": "You will not get in trouble, with us or with the law, for making a police officer do their job properly. Getting a subpoena or a warrant is bog-standard police work, not a hoop you're making them jump through out of spite; it's an important check and balance, and asking for one is not obstruction. Obviously, if there's a clear and present danger, comply with the officer in front of you, that's a different situation. But someone emailing you, or walking up and asking for the complete membership list, is not that. If it were actually urgent, it wouldn't look like this.",
+        "input": "p"
+      },
+      {
+        "caption": "What do you do?",
+        "input": "radio",
+        "required": true,
+        "options": [
+          "Export the roster on the spot, badges mean you comply immediately.",
+          "Politely decline to answer, get their contact info, and immediately loop in the rest of the exec board",
+          "Delete all the records.",
+          "Ask the officer if they would like a snack"
+        ],
+        "key": "admin_compliance_government_ack"
+      },
+      {
+        "label": "Scenario 3: The Constitution, briefly",
+        "input": "h3"
+      },
+      {
+        "label": "In NAACP v. Alabama ex rel. Patterson, 357 U.S. 449 (1958), the Supreme Court ruled on Alabama's demand that the NAACP hand over its membership list.",
+        "input": "p"
+      },
+      {
+        "caption": "What did the Court decide?",
+        "input": "radio",
+        "required": true,
+        "options": [
+          "Forcing disclosure was fine; membership lists aren't protected by anything.",
+          "Forcing disclosure violated members' First Amendment right to freedom of association.",
+          "The ruling only ever applied to the NAACP specifically, not other organizations.",
+          "The Court declined to rule and sent it back to Alabama."
+        ],
+        "key": "admin_compliance_first_amendment_ack"
+      },
+      {
+        "label": "Scenario 4: A sponsor wants \"the membership list\"",
+        "input": "h3"
+      },
+      {
+        "label": "A company that sponsors Hack@UCF emails asking for \"the membership list\" so they can reach out to members about internships and job openings. They're paying money and seem to think that buys them everyone's contact info.",
+        "input": "p"
+      },
+      {
+        "caption": "What do you do?",
+        "input": "radio",
+        "required": true,
+        "options": [
+          "Export the roster and send it over; they're a paying sponsor, they've earned it.",
+          "Offer to build a resume pool of members who've opted in, or offer to forward the job listing to our members",
+          "Give them just names and majors, no emails; that's basically harmless.",
+          "Forward their request to a few members you know are job-hunting and let them handle it personally."
+        ],
+        "key": "admin_compliance_sponsor_ack"
+      },
+      {
+        "label": "Scenario 5: A member asks about another member",
+        "input": "h3"
+      },
+      {
+        "label": "A member DMs you asking for another member's email, whether so-and-so paid dues, or something else about someone else's account. Sometimes that's just a member being nosy. Sometimes it's a fellow director who actually needs it: the Treasurer confirming who's paid, an event lead checking capacity, whatever their own role actually requires them to know. \"Are they an officer\" is not the test; \"does this fall under something their role is actually responsible for\" is.",
+        "input": "p"
+      },
+      {
+        "caption": "What do you do?",
+        "input": "radio",
+        "required": true,
+        "options": [
+          "Share it whenever it's a fellow officer/director asking; they're basically all trusted anyway.",
+          "Share only what's actually needed for a purpose tied to the requester's own role; for anyone else (including officers asking outside their lane), redirect them to the member directly or loop in the board.",
+          "Never share anything about another member with anyone, no exceptions, ever.",
+          "Ask the requester to justify it in a DM, then decide based on how convincing they sound."
+        ],
+        "key": "admin_compliance_peer_ack"
+      },
+      {
+        "input": "signature",
+        "key": "admin_compliance_signtime"
+      },
+      {
+        "input": "navigation",
+        "next": "/admin/",
+        "prev": "/",
+        "prev_label": "Cancel",
+        "next_label": "Submit"
+      }
+    ]
+  }
+]
