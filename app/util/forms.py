@@ -59,6 +59,23 @@ def iter_form_elements(kennelish_data):
             yield from iter_form_elements(el.get("elements"))
 
 
+def form_field_labels(kennelish_data) -> dict[str, str]:
+    """
+    Map each field key in a Kennelish form to what the member sees it called:
+    its label, else the nearest h3 above it (quiz radios only carry a generic
+    "What do you do?" caption), else its caption, else the key itself.
+    """
+    labels = {}
+    heading = None
+    for el in iter_form_elements(kennelish_data):
+        if el.get("input") == "h3":
+            heading = el.get("label")
+        key = el.get("key")
+        if key:
+            labels[key] = el.get("label") or heading or el.get("caption") or key
+    return labels
+
+
 def wrong_quiz_answers(num: str, kennelish_data, submitted: dict) -> list[str]:
     """
     Return the headings of the quiz questions in form `num` that `submitted`

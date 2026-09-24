@@ -53,6 +53,21 @@ def test_wrong_answer_names_the_question(client: TestClient, session: Session, a
     assert not admin_user.admin_compliance_signtime
 
 
+def test_stale_option_is_a_friendly_422(client: TestClient, untrained_admin_jwt: str):
+    # Page opened before an option's wording changed, submitted after.
+    body = {**ANSWERS, "admin_compliance_reporter_ack": "Ask for members consent before sending their emails"}
+    response = client.post(f"/api/form/{FORM}", cookies={"token": untrained_admin_jwt}, json=body)
+    assert response.status_code == 422
+    assert "Scenario 1" in response.json()["detail"]
+    assert "reload the page" in response.json()["detail"]
+
+
+def test_malformed_email_is_a_friendly_422(client: TestClient, jwt: str):
+    response = client.post("/api/form/2", cookies={"token": jwt}, json={"email": "someone@nodomain"})
+    assert response.status_code == 422
+    assert "Preferred Email" in response.json()["detail"]
+
+
 def test_passing_unlocks_panel_and_stamps_signtime_server_side(client: TestClient, session: Session, admin_user: UserModel, untrained_admin_jwt: str):
     # No signature time in the body: the server sets it on a pass.
     response = client.post(f"/api/form/{FORM}", cookies={"token": untrained_admin_jwt}, json=ANSWERS)
