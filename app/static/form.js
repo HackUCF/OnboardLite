@@ -258,15 +258,6 @@ function resetInfra() {
     });
 }
 
-function downloadProfile() {
-  const downloadEndpoint = "/infra/OpenVPN";
-  const anchor = document.createElement("a");
-  anchor.href = downloadEndpoint;
-  anchor.download = "HackUCF.ovpn";
-  document.body.appendChild(anchor);
-  anchor.click();
-  document.body.removeChild(anchor);
-}
 function provisionInfra() {
   fetch("/infra/provision")
     .then((data) => {
