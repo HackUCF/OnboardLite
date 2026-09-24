@@ -6,6 +6,7 @@ import time
 import uuid
 
 from fastapi import APIRouter, Depends, HTTPException, Request, status
+from pydantic import ValidationError
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import selectinload
 from sqlmodel import Session, select
@@ -14,7 +15,7 @@ from app.models.info import InfoModel
 from app.models.user import PublicContact, UserModel, user_update_instance
 from app.util.auth_dependencies import CurrentMember
 from app.util.database import get_session
-from app.util.forms import FORM_CORRECT_ANSWERS, Forms, apply_fuzzy_parsing, iter_form_elements, transform_dict, wrong_quiz_answers
+from app.util.forms import FORM_CORRECT_ANSWERS, Forms, apply_fuzzy_parsing, form_field_labels, iter_form_elements, transform_dict, wrong_quiz_answers
 from app.util.kennelish import Transformer
 
 logger = logging.getLogger(__name__)
@@ -177,7 +178,20 @@ async def post_form(
     except json.JSONDecodeError:
         return {"description": "Malformed JSON input."}
 
-    model_validated = model(**inp).model_dump()
+    try:
+        model_validated = model(**inp).model_dump()
+    except ValidationError as e:
+        # A typo'd email, or a radio answer from a page opened before the
+        # form's options changed. That's the member's to fix, not a crash;
+        # log field names and error types only, since the input is PII.
+        failures = [(str(err["loc"][0]) if err["loc"] else "", err["type"]) for err in e.errors()]
+        logger.warning("Form %s submit failed validation: %s", num, failures)
+        bad_keys = list(dict.fromkeys(key for key, _ in failures))
+        labels = form_field_labels(kennelish_data)
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="Please check: " + "; ".join(labels.get(key, key) for key in bad_keys) + ". If the form changed since you opened it, reload the page and try again.",
+        ) from e
 
     # Grade quiz-style radios, if this form has any. Wrong answers bounce
     # the submission back instead of getting silently recorded.
